@@ -626,7 +626,7 @@ function openCheckout(){
       <input id="ck_phone" class="inp" placeholder="연락처 (010-1234-5678)" inputmode="tel">
       <input id="ck_addr" class="inp" placeholder="배송지 주소 (예: 서울시 성동구 아차산로 1)">
     </div>
-    <p class="text-sm font-bold mt-5 mb-2">결제 수단</p>
+    ${tossReady()?'':`<p class="text-xs text-neutral-400 mt-3">토스 결제 꺼짐 사유: ${tossWhy()}</p>`}<p class="text-sm font-bold mt-5 mb-2">결제 수단</p>
     <div class="grid grid-cols-2 gap-2">${[['card','신용/체크카드'],['kakao','카카오페이'],['naver','네이버페이'],['toss','토스페이']].map((m,i)=>`<label class="sel px-3 py-2.5 text-sm font-semibold cursor-pointer flex items-center gap-2 has-[:checked]:border-black has-[:checked]:shadow-[0_0_0_3px_#C6FF00]"><input type="radio" name="pay" value="${m[0]}" ${i===0?'checked':''} class="accent-black">${m[1]}</label>`).join('')}</div>
     <div class="mt-5 bg-neutral-100 rounded-xl p-4 text-sm space-y-1"><div class="flex justify-between"><span>상품 금액</span><span>${won(t.subtotal)}</span></div>${t.discount?`<div class="flex justify-between text-green-700 font-semibold"><span>첫구매 쿠폰 (10%)</span><span>−${won(t.discount)}</span></div>`:''}<div class="flex justify-between"><span>배송비</span><span>${t.shipping?won(t.shipping):'무료'}</span></div><div class="flex justify-between font-bold text-base pt-1 border-t border-neutral-300"><span>총 결제금액</span><span>${won(t.total)}</span></div></div>
     <button id="payBtn" type="submit" class="btn btn-neon w-full mt-5 !py-3.5 text-base">${won(t.total)} 결제하기</button>
@@ -1337,7 +1337,16 @@ function distBars(obj, fmt = v=>v){
   return e.length ? e.map(([k,v])=>`<div class="mb-3"><div class="flex justify-between text-sm"><span class="font-semibold">${esc(k)}</span><span class="font-display font-bold">${fmt(v)}</span></div><div class="h-2 bg-neutral-200 rounded-full mt-1 overflow-hidden"><div class="h-full bg-black" style="width:${v/max*100}%"></div></div></div>`).join('') : '<p class="text-sm text-neutral-400 py-6 text-center">데이터가 없어요</p>';
 }
 
-function adminEntry(){ if(ui.admin) setView('admin'); else openAdminLogin(); }
+async function adminEntry(){
+  if(isCloud()){   // 실서비스: 비밀번호가 아니라 DB의 관리자 권한(profiles.role)으로 확인해요
+    if(!cu()){ toast('관리자 계정으로 먼저 로그인해 주세요'); openAuth(); return; }
+    let ok = false; try{ ok = await rpc('is_admin'); }catch(e){}
+    if(!ok){ toast('관리자 권한이 없는 계정이에요'); return; }
+    ui.admin = true; try{ sessionStorage.setItem('cavia_admin','1'); }catch(e){}
+    ui.adminTab = ui.adminTab || 'overview'; renderAuthArea(); setView('admin'); return;
+  }
+  if(ui.admin) setView('admin'); else openAdminLogin();
+}
 function openAdminLogin(){
   showModal(`<form class="p-6 sm:p-8" onsubmit="event.preventDefault();adminLogin()">${modalHead('ADMIN','관리자 로그인')}
     <div class="space-y-3"><input id="ad_id" class="inp" placeholder="관리자 아이디" autocomplete="username"><input id="ad_pw" type="password" class="inp" placeholder="비밀번호" autocomplete="current-password"></div>
@@ -1361,7 +1370,9 @@ function renderAdmin(keep){
     <nav class="mt-3 flex lg:flex-col gap-2 overflow-x-auto no-scrollbar">${nav.map(n=>`<button onclick="ui.adminTab='${n[0]}';renderAdmin()" class="sel text-left px-4 py-3 text-sm font-bold whitespace-nowrap ${ui.adminTab===n[0]?'on bg-white':''}">${n[1]} ${n[2]}${n[0]==='sellers'&&pendingWd?` <span class="ml-1 bg-red-600 text-white text-[10px] rounded-full px-1.5 py-0.5">${pendingWd}</span>`:''}</button>`).join('')}
     <button onclick="goMarket()" class="sel text-left px-4 py-3 text-sm font-bold whitespace-nowrap">마켓으로</button>
     <button onclick="adminLogout()" class="sel text-left px-4 py-3 text-sm font-bold whitespace-nowrap text-red-600">로그아웃</button></nav>`;
-  ({overview:adminOverview, users:adminUsers, orders:adminOrders, sellers:adminSellers, products:adminProducts, samples:adminSamples}[ui.adminTab] || adminOverview)();
+  ui.adminDb = !!(isCloud() && cu());   // 로그인한 DB 계정이면 실제 DB 데이터를 보여줘요
+  const A = ui.adminDb ? {overview:adminDbOverview, users:adminDbUsers, orders:adminDbOrders} : {};
+  ({overview:adminOverview, users:adminUsers, orders:adminOrders, sellers:adminSellers, products:adminProducts, samples:adminSamples, ...A}[ui.adminTab] || (A.overview || adminOverview))();
   if(!keep) window.scrollTo({top:0});
 }
 
@@ -1781,6 +1792,7 @@ async function cloudPlaceOrder(t, name, phone, addr, method, pending){
 // 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
 const TOSS_CLIENT_KEY = '';
 const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
+const tossWhy = () => !/^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) ? (/_sk_|_gsk_/.test(TOSS_CLIENT_KEY) ? '시크릿 키가 들어 있어요(클라이언트 키로 바꿔 주세요)' : '클라이언트 키가 아직 코드에 없어요') : !sb ? '데이터베이스에 연결되지 않았어요' : !cu() ? '이 계정은 DB 계정이 아니에요(로그아웃 후 구글로 다시 로그인해 주세요)' : '';
 const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
 let _tossLoad = null;
 function loadToss(){
@@ -1898,6 +1910,118 @@ refundOrder = async function(id){
   }
   return _refundOrderSim(id);
 };
+
+
+/* ============================================================
+   관리자 콘솔 - 실제 DB 데이터 (회원 · 주문 · 개요 · 환불)
+============================================================ */
+let _admSeq = 0;
+async function admLoad(tab, title, sub, fn){
+  const seq = ++_admSeq;
+  $('#adminMain').innerHTML = adminHead(title, sub) + `<div class="bg-white border rounded-2xl p-10 text-center text-neutral-400 text-sm">불러오는 중…</div>`;
+  try{ const html = await fn(); if(seq !== _admSeq || ui.adminTab !== tab) return; $('#adminMain').innerHTML = html; }
+  catch(e){
+    if(seq !== _admSeq) return;
+    if(/admin only/i.test((e&&e.message)||'')){ ui.admin = false; try{ sessionStorage.removeItem('cavia_admin'); }catch(x){} renderAuthArea(); setView('market'); return toast('관리자 권한이 없는 계정이에요'); }
+    $('#adminMain').innerHTML = adminHead(title, sub) + `<div class="bg-white border rounded-2xl p-8 text-center"><p class="font-bold">데이터를 불러오지 못했어요</p><p class="text-sm text-neutral-500 mt-1">${esc(dbErr(e))}</p><p class="text-xs text-neutral-400 mt-2">schema.sql을 최신으로 다시 실행했는지 확인해 주세요.</p><button class="btn btn-dark mt-4" onclick="renderAdmin(true)">다시 시도</button></div>`;
+  }
+}
+const admNotice = '<div class="mb-4 rounded-xl bg-neutral-100 px-4 py-3 text-xs text-neutral-600">실제 DB 데이터예요. 판매자 정산 · 출금 내역은 아직 이 브라우저 기준이에요.</div>';
+function adminDbOverview(){
+  admLoad('overview', 'OVERVIEW', 'cavia 운영 현황 (DB)', async ()=>{
+    const d = await rpc('admin_overview');
+    const prov = {}; Object.entries(d.providers||{}).forEach(([k,v])=>{ prov[{google:'구글', kakao:'카카오', facebook:'페이스북', email:'이메일'}[k] || k] = v; });
+    const pm = {}; Object.entries(d.methods||{}).forEach(([k,v])=>{ pm[PAY_NAMES[k]||k] = v; });
+    const labels = d.days || [], su = d.signups14 || [], py = d.pays14 || [];
+    return adminHead('OVERVIEW', `cavia 운영 현황 · ${new Date().toLocaleDateString('ko-KR')} 기준 (DB)`, '<button class="btn btn-line !py-2 text-sm" onclick="renderAdmin(true)">새로고침</button>') + admNotice + `
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        ${kpi('총 가입자', d.users.toLocaleString()+'명', `오늘 +${d.users_today} · 최근 7일 +${d.users_7d}`, true)}
+        ${kpi('총 결제 금액', won(d.paid_sum), `환불 제외 · 오늘 ${won(d.paid_today)}`, true)}
+        ${kpi('결제 건수', d.paid_n.toLocaleString()+'건', `판매 수량 ${Number(d.items_qty).toLocaleString()}개`)}
+        ${kpi('평균 주문 금액', won(d.paid_n ? d.paid_sum/d.paid_n : 0), '결제 금액 ÷ 결제 건수')}
+        ${kpi('환불 총액', won(d.refund_sum), `${d.refund_n}건`)}
+        ${kpi('판매자(브랜드)', d.sellers+'곳', '브랜드를 개설한 회원')}
+        ${kpi('등록 상품', d.products+'개', '시드 상품 포함')}
+        ${kpi('결제 진행 중', d.pending_n+'건', '결제창이 열려 있는 주문')}
+      </div>
+      <div class="grid lg:grid-cols-2 gap-4 mt-4">
+        <div class="bg-white border rounded-2xl p-5"><div class="flex justify-between mb-4"><h3 class="font-bold">가입자 추이 (14일)</h3><span class="text-xs text-neutral-400">합계 ${sumBy(su,v=>v)}명</span></div>${miniBars(su, labels, v=>v, 'bg-neutral-900')}</div>
+        <div class="bg-white border rounded-2xl p-5"><div class="flex justify-between mb-4"><h3 class="font-bold">결제 금액 추이 (14일)</h3><span class="text-xs text-neutral-400">합계 ${won(sumBy(py,v=>v))}</span></div>${miniBars(py, labels, shortWon, 'bg-neutral-900')}</div>
+      </div>
+      <div class="grid lg:grid-cols-2 gap-4 mt-4">
+        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-4">가입 경로</h3>${distBars(prov, v=>v+'명')}</div>
+        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-4">결제 수단별 금액</h3>${distBars(pm, won)}</div>
+      </div>`;
+  });
+}
+let _admUserQ = '', _admUserT = null;
+function adminDbUsers(){
+  admLoad('users', 'MEMBERS', 'DB 회원 목록', async ()=>{
+    const list = await rpc('admin_users', {p_q:_admUserQ});
+    const provN = {google:'구글', kakao:'카카오', facebook:'페이스북', email:'이메일'};
+    const rows = list.map(u=>`<tr class="border-t">${
+      td(`<p class="font-semibold">${esc(u.nick)} ${u.role==='admin'?pill('관리자','bg-black text-neon'):''} ${u.brand?pill('판매자','bg-neon text-black'):''}</p>`) +
+      td(esc(provN[u.provider]||u.provider||'-')) + td(esc(u.email||'-'), 'text-neutral-500 break-all') + td(fmtDate(u.created_at), 'whitespace-nowrap') +
+      td(u.last_sign_in ? fmtDate(u.last_sign_in) : '-', 'whitespace-nowrap text-neutral-500') +
+      td(u.brand ? esc(u.brand) : '<span class="text-neutral-300">-</span>') + td(u.orders_n+'건', 'text-right') +
+      td(`<span class="font-display font-semibold">${won(u.paid_sum)}</span>`, 'text-right')}</tr>`).join('');
+    return adminHead('MEMBERS', `${list.length}명${_admUserQ?' · 검색 결과':''} (최대 500명)`,
+        `<input id="admUserQ" class="inp !w-64" placeholder="닉네임 · 이메일 · 가입경로 검색" value="${esc(_admUserQ)}" oninput="admUserSearch(this.value)">`) +
+      `<div class="bg-white border rounded-2xl overflow-hidden">${tbl(['회원','가입경로','이메일','가입일','최근 접속','브랜드','주문','결제액'], rows, 860)}</div>`;
+  });
+}
+function admUserSearch(v){ _admUserQ = v; clearTimeout(_admUserT); _admUserT = setTimeout(()=>{ adminDbUsers(); setTimeout(()=>{ const i = $('#admUserQ'); if(i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 400); }, 450); }
+const ADM_ST = {paid:['결제완료','bg-green-100 text-green-700'], refunded:['환불','bg-red-100 text-red-700'], pending:['결제 대기','bg-amber-100 text-amber-700'], canceled:['취소','bg-neutral-200 text-neutral-600']};
+let _admOrders = [], _admOrderF = 'all';
+function adminDbOrders(){
+  admLoad('orders', 'ORDERS & PAYMENTS', 'DB 주문 목록', async ()=>{
+    const list = await rpc('admin_orders', {p_status:_admOrderF === 'all' ? 'all' : _admOrderF});
+    _admOrders = list;
+    const chip = (k,l)=>`<button class="chip !py-1.5 !text-sm ${_admOrderF===k?'on':''}" onclick="_admOrderF='${k}';adminDbOrders()">${l}</button>`;
+    const rows = list.map(o=>{
+      const st = ADM_ST[o.status] || [o.status, 'bg-neutral-100'];
+      const first = o.lines[0];
+      return `<tr class="border-t ${o.status==='refunded'?'bg-neutral-50 text-neutral-400':''}">${
+        td(`<b class="text-black">${esc(o.id)}</b>${o.toss?'':' '+pill('모의','bg-neutral-200 text-neutral-600')}`) +
+        td(esc(o.buyer_nick||o.name)) +
+        td(`<span class="block max-w-[220px] truncate">${esc(first?first.name||'-':'-')}${o.lines.length>1?` 외 ${o.lines.length-1}건`:''}</span>`) +
+        td(PAY_NAMES[o.method]||o.method||'-') +
+        td(`<span class="font-display font-semibold ${o.status==='refunded'?'line-through':''}">${won(o.total)}</span>`, 'text-right') +
+        td(fmtDT(o.created_at), 'whitespace-nowrap') + td(pill(st[0], st[1])) +
+        td(`<button class="btn btn-line !py-1.5 !px-3 text-xs" onclick="admOrderInfo('${o.id}')">배송정보</button>` + (o.status==='paid' ? ` <button class="btn btn-line !py-1.5 !px-3 text-xs !border-red-300 !text-red-600 hover:!bg-red-600 hover:!text-white" onclick="admRefundAsk('${o.id}')">환불</button>` : ''), 'text-right whitespace-nowrap')}</tr>`;
+    }).join('');
+    return adminHead('ORDERS & PAYMENTS', `${list.length}건 (최근 300건)`, '<button class="btn btn-line !py-2 text-sm" onclick="adminDbOrders()">새로고침</button>') +
+      `<div class="flex gap-2 mb-3 flex-wrap">${chip('all','전체')}${chip('paid','결제완료')}${chip('refunded','환불')}${chip('pending','결제 대기')}${chip('canceled','취소')}</div>
+       <div class="bg-white border rounded-2xl overflow-hidden">${tbl(['주문번호','구매자','상품','결제수단','금액','일시','상태',''], rows, 940)}</div>`;
+  });
+}
+function admOrderInfo(id){
+  const o = _admOrders.find(x=>x.id===id); if(!o) return;
+  showModal(`<div class="p-6 sm:p-8">${modalHead(o.id, `${fmtDT(o.created_at)} · ${(ADM_ST[o.status]||[o.status])[0]}`)}
+    <div class="text-sm space-y-1 bg-neutral-100 rounded-xl p-4"><p><b>받는 분</b> ${esc(o.name)}</p><p><b>연락처</b> ${esc(o.phone)}</p><p><b>주소</b> ${esc(o.addr)}</p></div>
+    <div class="mt-4 space-y-2">${o.lines.map(l=>`<div class="flex justify-between text-sm gap-2"><span>${esc(l.brand)} · ${esc(l.name||'-')} <span class="text-neutral-400">/ ${esc(l.size)} × ${l.qty}</span></span><b>${won(l.price*l.qty)}</b></div>`).join('')}</div>
+    <div class="mt-4 pt-3 border-t text-sm space-y-1"><div class="flex justify-between"><span>상품</span><span>${won(o.subtotal)}</span></div>${o.discount?`<div class="flex justify-between text-green-700"><span>쿠폰</span><span>−${won(o.discount)}</span></div>`:''}<div class="flex justify-between"><span>배송비</span><span>${o.shipping?won(o.shipping):'무료'}</span></div><div class="flex justify-between font-bold"><span>합계</span><span>${won(o.total)}</span></div></div>
+    <button class="btn btn-dark w-full mt-5" onclick="closeModal()">닫기</button></div>`);
+}
+function admRefundAsk(id){
+  const o = _admOrders.find(x=>x.id===id); if(!o) return;
+  showModal(`<div class="p-6 text-center"><h2 class="font-bold text-lg">${esc(o.id)} 환불할까요?</h2>
+    <p class="text-sm text-neutral-500 mt-2">${esc(o.buyer_nick||o.name)} · ${won(o.total)}<br>${o.toss ? '토스페이먼츠 결제가 취소되고, ' : ''}재고가 복구되고 판매 실적에서 빠져요. 되돌릴 수 없어요.</p>
+    <div class="grid grid-cols-2 gap-2 mt-5"><button class="btn btn-line" onclick="closeModal()">취소</button><button id="admRefundBtn" class="btn bg-red-600 text-white" onclick="admRefund('${id}')">환불 처리</button></div></div>`);
+}
+async function admRefund(id){
+  const o = _admOrders.find(x=>x.id===id); if(!o) return;
+  const b = $('#admRefundBtn'); if(b){ b.disabled = true; b.textContent = '처리 중…'; }
+  try{
+    if(o.toss){
+      const r = await sb.functions.invoke('toss-cancel', {body:{orderId:id, reason:'관리자 환불'}});
+      if(r.error){ let m = r.error.message; try{ const j = await r.error.context.json(); m = j.message || j.error || m; }catch(e){} throw new Error(m); }
+    } else await rpc('admin_refund', {p_order:id});
+    closeModal(); toast(`${id} 환불 처리가 완료되었어요`); adminDbOrders(); cloudLoadProducts().then(()=>renderGrid()).catch(()=>{});
+  }catch(e){ if(b){ b.disabled = false; b.textContent = '환불 처리'; } toast('환불에 실패했어요: ' + (e.message||e), 5000); }
+}
+const _adminSellersLocal = adminSellers;
+adminSellers = function(){ _adminSellersLocal(); if(ui.adminDb){ const m = $('#adminMain'); if(m) m.insertAdjacentHTML('afterbegin', '<div class="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">판매자 정산 · 출금은 아직 DB와 연결되지 않았어요. 이 화면은 이 브라우저에 저장된 데이터만 보여줘요.</div>'); } };
 
 /* ============================================================
    리뷰 시스템 (구매 인증)
