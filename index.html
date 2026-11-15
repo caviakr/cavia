@@ -626,7 +626,7 @@ function openCheckout(){
       <input id="ck_phone" class="inp" placeholder="연락처 (010-1234-5678)" inputmode="tel">
       <input id="ck_addr" class="inp" placeholder="배송지 주소 (예: 서울시 성동구 아차산로 1)">
     </div>
-    <p class="text-sm font-bold mt-5 mb-2">결제 수단</p>
+    ${tossReady()?'':`<p class="text-xs text-neutral-400 mt-3">토스 결제 꺼짐 사유: ${tossWhy()}</p>`}<p class="text-sm font-bold mt-5 mb-2">결제 수단</p>
     <div class="grid grid-cols-2 gap-2">${[['card','신용/체크카드'],['kakao','카카오페이'],['naver','네이버페이'],['toss','토스페이']].map((m,i)=>`<label class="sel px-3 py-2.5 text-sm font-semibold cursor-pointer flex items-center gap-2 has-[:checked]:border-black has-[:checked]:shadow-[0_0_0_3px_#C6FF00]"><input type="radio" name="pay" value="${m[0]}" ${i===0?'checked':''} class="accent-black">${m[1]}</label>`).join('')}</div>
     <div class="mt-5 bg-neutral-100 rounded-xl p-4 text-sm space-y-1"><div class="flex justify-between"><span>상품 금액</span><span>${won(t.subtotal)}</span></div>${t.discount?`<div class="flex justify-between text-green-700 font-semibold"><span>첫구매 쿠폰 (10%)</span><span>−${won(t.discount)}</span></div>`:''}<div class="flex justify-between"><span>배송비</span><span>${t.shipping?won(t.shipping):'무료'}</span></div><div class="flex justify-between font-bold text-base pt-1 border-t border-neutral-300"><span>총 결제금액</span><span>${won(t.total)}</span></div></div>
     <button id="payBtn" type="submit" class="btn btn-neon w-full mt-5 !py-3.5 text-base">${won(t.total)} 결제하기</button>
@@ -1779,8 +1779,9 @@ async function cloudPlaceOrder(t, name, phone, addr, method, pending){
 ============================================================ */
 // 토스페이먼츠 개발자센터의 "클라이언트 키"를 넣으세요: 결제위젯 키(test_gck_...) 또는 API 개별 연동 키(test_ck_...)
 // 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
-const TOSS_CLIENT_KEY = 'test_ck_c19yAOlsB7TbI094HX9ED19bx59BJnGEEt';
+const TOSS_CLIENT_KEY = '';
 const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
+const tossWhy = () => !/^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) ? (/_sk_|_gsk_/.test(TOSS_CLIENT_KEY) ? '시크릿 키가 들어 있어요(클라이언트 키로 바꿔 주세요)' : '클라이언트 키가 아직 코드에 없어요') : !sb ? '데이터베이스에 연결되지 않았어요' : !cu() ? '이 계정은 DB 계정이 아니에요(로그아웃 후 구글로 다시 로그인해 주세요)' : '';
 const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
 let _tossLoad = null;
 function loadToss(){
