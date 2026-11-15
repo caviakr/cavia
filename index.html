@@ -239,7 +239,6 @@ const SALE_STATUS_OWN = ['배송준비중','배송중','배송완료'];
 const stLabel = (x, i = x.status) => x.refunded ? '환불됨' : (x.kind==='own' ? SALE_STATUS_OWN : SALE_STATUS)[i];
 const SIZES = ['S','M','L','XL','2XL'];
 const sizesFor = base => BASES[base].cat==='acc' ? ['FREE'] : SIZES;
-const ADMIN_ID = 'admin', ADMIN_PW = 'cavia-admin';
 const RESERVED = ['CAVIA','DROPLAB','ADMIN','OFFICIAL','MUSINSA','MARPPLE','NIKE','ADIDAS'];
 const PG_RATE = 0.03, TAX_RATE = 0.033, MIN_WITHDRAW = 10000;
 
@@ -1345,22 +1344,9 @@ async function adminEntry(){
     ui.admin = true; try{ sessionStorage.setItem('cavia_admin','1'); }catch(e){}
     ui.adminTab = ui.adminTab || 'overview'; renderAuthArea(); setView('admin'); return;
   }
-  if(ui.admin) setView('admin'); else openAdminLogin();
+  openAdminLogin();   // DB에 연결되지 않은 상태에서는 관리자 화면을 열지 않아요
 }
-function openAdminLogin(){
-  showModal(`<form class="p-6 sm:p-8" onsubmit="event.preventDefault();adminLogin()">${modalHead('ADMIN','관리자 로그인')}
-    <div class="space-y-3"><input id="ad_id" class="inp" placeholder="관리자 아이디" autocomplete="username"><input id="ad_pw" type="password" class="inp" placeholder="비밀번호" autocomplete="current-password"></div>
-    <button class="btn btn-neon w-full mt-4 !py-3.5" type="submit">로그인</button>
-    <p class="text-xs text-neutral-400 mt-3 leading-relaxed">프로토타입 데모 계정: <b>${ADMIN_ID}</b> / <b>${ADMIN_PW}</b><br>※ 실서비스에서는 서버에서 관리자 권한을 검증해야 해요.</p></form>`);
-}
-function adminLogin(){
-  if($('#ad_id').value.trim()!==ADMIN_ID || $('#ad_pw').value!==ADMIN_PW){
-    const b = $('#modalBox'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
-    return toast('아이디 또는 비밀번호가 올바르지 않아요');
-  }
-  ui.admin = true; try{ sessionStorage.setItem('cavia_admin','1'); }catch(e){}
-  ui.adminTab = 'overview'; closeModal(); setView('admin'); toast('관리자 모드로 들어왔어요');
-}
+function openAdminLogin(){ toast('관리자는 관리자 권한이 있는 계정으로 로그인한 뒤에만 들어갈 수 있어요. 잠시 후 다시 눌러 주세요', 4500); }
 function adminLogout(){ ui.admin = false; try{ sessionStorage.removeItem('cavia_admin'); }catch(e){} setView('market'); toast('관리자에서 로그아웃했어요'); }
 
 function renderAdmin(keep){
