@@ -165,7 +165,7 @@ tailwind.config = { theme: { extend: { colors: { neon: '#C6FF00' }, fontFamily: 
       </div>
       <div class="mt-4 flex flex-wrap gap-4 justify-between items-center text-xs">
         <span id="dbNote">© 2026 cavia</span>
-        <span class="flex gap-4"><button onclick="adminEntry()" class="underline hover:text-neon">관리자</button><button onclick="resetAll()" class="underline hover:text-neon">데이터 초기화</button></span>
+        <span class="flex gap-4"><button onclick="resetAll()" class="underline hover:text-neon">데이터 초기화</button></span>
       </div>
     </div>
   </footer>
@@ -290,7 +290,7 @@ const PRICE_LABELS = {all:'전체 가격', u40:'4만원 이하', m60:'4~6만원'
 const ui = { admin:false, adminTab:'overview', adminQ:'', orderF:'all', price:'all', brandF:null, cat:'all', sort:'pop', q:'', likesOnly:false, view:'market', tab:'home', justDropped:null, authTab:'social', authMode:'login', authNext:null, pm:null, brand:null, drawer:false };
 let draft = newDraft();
 
-try{ ui.admin = sessionStorage.getItem('cavia_admin')==='1'; }catch(e){}
+try{ sessionStorage.removeItem('cavia_admin'); }catch(e){}   // 관리자 여부는 저장해 두지 않고 로그인 후 DB에서 매번 확인해요
 const me = () => { const u = state.users.find(x => x.id === state.session); return u && !u.suspended ? u : null; };
 const prod = id => state.products.find(p => p.id === id);
 const taxRateOf = u => (u && u.brand && u.brand.biz && u.brand.biz.type==='business') ? 0 : TAX_RATE;
@@ -1350,6 +1350,7 @@ function openAdminLogin(){ toast('관리자는 관리자 권한이 있는 계정
 function adminLogout(){ ui.admin = false; try{ sessionStorage.removeItem('cavia_admin'); }catch(e){} setView('market'); toast('관리자에서 로그아웃했어요'); }
 
 function renderAdmin(keep){
+  if(!(isCloud() && cu())){ ui.admin = false; renderAuthArea(); setView('market'); toast('관리자는 관리자 계정으로 로그인해야 볼 수 있어요'); return; }
   const nav = [['overview','','개요'],['users','','회원 관리'],['orders','','주문 · 결제'],['sellers','','판매자 · 정산'],['products','','상품 관리'],['samples','','샘플 주문']];
   const pendingWd = state.withdrawals.filter(w=>w.status!=='paid').length;
   $('#adminSide').innerHTML = `<div class="bg-black text-white rounded-2xl p-5 grain"><p class="font-display text-neon text-[11px] tracking-[.2em]">ADMIN CONSOLE</p><p class="font-display text-3xl font-bold lowercase mt-1">cav<span class="text-neon">ia</span></p><p class="text-xs text-neutral-500 mt-1">운영 관리자</p></div>
@@ -1732,6 +1733,15 @@ async function cloudAfterLogin(){
   renderGrid(); renderAuthArea(); if(ui.view==='studio') renderStudio(); if(ui.view==='growth') renderGrowth();
 }
 
+const _cloudAfterLogin = cloudAfterLogin;
+cloudAfterLogin = async function(){
+  await _cloudAfterLogin();
+  let ok = false; try{ if(cu()) ok = !!(await rpc('is_admin')); }catch(e){}
+  ui.admin = ok; renderAuthArea(); if(!ok && ui.view==='admin') setView('market');
+};
+const _logoutBase = logout;
+logout = async function(){ ui.admin = false; return _logoutBase(); };
+
 /* --- 기존 함수에 클라우드 반영 (원래 동작은 그대로 실행한 뒤 DB에 이어서 반영) --- */
 const _syncAuthUser = syncAuthUser;
 syncAuthUser = function(su){ const r = _syncAuthUser(su); if(r) setTimeout(cloudAfterLogin, 0); return r; };
@@ -1776,7 +1786,7 @@ async function cloudPlaceOrder(t, name, phone, addr, method, pending){
 ============================================================ */
 // 토스페이먼츠 개발자센터의 "클라이언트 키"를 넣으세요: 결제위젯 키(test_gck_...) 또는 API 개별 연동 키(test_ck_...)
 // 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
-const TOSS_CLIENT_KEY = 'test_ck_c19yAOlsB7TbI094HX9ED19bx59BJnGEEt';
+const TOSS_CLIENT_KEY = '';
 const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
 const tossWhy = () => !/^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) ? (/_sk_|_gsk_/.test(TOSS_CLIENT_KEY) ? '시크릿 키가 들어 있어요(클라이언트 키로 바꿔 주세요)' : '클라이언트 키가 아직 코드에 없어요') : !sb ? '데이터베이스에 연결되지 않았어요' : !cu() ? '이 계정은 DB 계정이 아니에요(로그아웃 후 구글로 다시 로그인해 주세요)' : '';
 const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
