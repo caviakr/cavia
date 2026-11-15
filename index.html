@@ -620,7 +620,7 @@ function checkout(){
 function openCheckout(){
   const t = cartTotals(), u = me();
   showModal(`<form class="p-6 sm:p-8" onsubmit="event.preventDefault();placeOrder()">
-    ${modalHead('CHECKOUT', `${t.lines.length}개 상품 · 결제 시뮬레이션 (실제 결제되지 않아요)`)}
+    ${modalHead('CHECKOUT', `${t.lines.length}개 상품 · ${tossReady()?(/^test_/.test(TOSS_CLIENT_KEY)?'토스페이먼츠 테스트 결제 (실제 청구되지 않아요)':'토스페이먼츠 결제'):'결제 시뮬레이션 (실제 결제되지 않아요)'}`)}
     <div class="space-y-3">
       <input id="ck_name" class="inp" placeholder="받는 분 이름" value="${esc(u.nick)}">
       <input id="ck_phone" class="inp" placeholder="연락처 (010-1234-5678)" inputmode="tel">
@@ -785,7 +785,8 @@ const socialBtn = (p, label, cls, style, icon) => `<button onclick="socialLogin(
 const OAUTH = {kakao:{id:'kakao', name:'카카오'}, naver:{id:'custom:naver', name:'네이버'}, google:{id:'google', name:'구글'}, facebook:{id:'facebook', name:'페이스북'}};
 const authHome = () => location.origin + location.pathname;
 // Supabase 설정에서 켜진 로그인만 활성화 (켜지지 않은 로그인은 '준비 중'으로 표시)
-const providerOn = p => !sb || !authProviders || authProviders[OAUTH[p].id]===true;
+const PROVIDER_HOLD = ['kakao']; // 카카오: 비즈 앱 전환(이메일 동의) 완료 후 목록에서 지우면 활성화돼요
+const providerOn = p => !PROVIDER_HOLD.includes(p) && (!sb || !authProviders || authProviders[OAUTH[p].id]===true);
 const soon = p => providerOn(p) ? '' : ' <span class="text-[11px] font-semibold opacity-80">· 준비 중</span>';
 function authErr(e){
   const m = ((e && e.message) || '').toLowerCase();
@@ -1766,9 +1767,137 @@ openOrders = async function(){
       state.orders.forEach(o=>o.lines.forEach(l=>{ if(l.itemId && m[l.itemId]!=null) l.dbSt = m[l.itemId]; })); } }catch(e){} }
   _openOrders();
 };
-async function cloudPlaceOrder(t, name, phone, addr, method){
-  return rpc('place_order', {p_items:t.lines.map(l=>({product_id:l.p.id, size:l.size, qty:l.qty})), p_name:name, p_phone:phone, p_addr:addr, p_method:method, p_coupon:!!state.coupon});
+async function cloudPlaceOrder(t, name, phone, addr, method, pending){
+  const args = {p_items:t.lines.map(l=>({product_id:l.p.id, size:l.size, qty:l.qty})), p_name:name, p_phone:phone, p_addr:addr, p_method:method, p_coupon:!!state.coupon};
+  if(pending) args.p_pending = true;
+  return rpc('place_order', args);
 }
+
+
+/* ============================================================
+   토스페이먼츠 결제 (클라이언트 키만 사용 / 승인·환불은 서버 함수가 처리)
+============================================================ */
+// 토스페이먼츠 개발자센터의 "클라이언트 키"를 넣으세요: 결제위젯 키(test_gck_...) 또는 API 개별 연동 키(test_ck_...)
+// 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
+const TOSS_CLIENT_KEY = '';
+const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
+const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
+let _tossLoad = null;
+function loadToss(){
+  if(window.TossPayments) return Promise.resolve();
+  if(_tossLoad) return _tossLoad;
+  _tossLoad = new Promise((res, rej)=>{ const s = document.createElement('script'); s.src = 'https://js.tosspayments.com/v2/standard'; s.onload = res; s.onerror = ()=>{ _tossLoad = null; rej(new Error('토스페이먼츠를 불러오지 못했어요. 네트워크를 확인해 주세요')); }; document.head.appendChild(s); });
+  return _tossLoad;
+}
+const tossOrderName = t => { const l = t.lines[0]; const n = l ? l.p.name : 'cavia 주문'; return (n.length>40 ? n.slice(0,40) : n) + (t.lines.length>1 ? ` 외 ${t.lines.length-1}건` : ''); };
+function tossForm(){
+  const name=$('#ck_name').value.trim(), phone=$('#ck_phone').value.trim(), addr=$('#ck_addr').value.trim();
+  if(name.length<2){ toast('받는 분 이름을 입력해 주세요'); return null; }
+  if(!/^01\d[-\s]?\d{3,4}[-\s]?\d{4}$/.test(phone)){ toast('연락처를 확인해 주세요 (예: 010-1234-5678)'); return null; }
+  if(addr.length<5){ toast('배송지 주소를 입력해 주세요'); return null; }
+  const m = document.querySelector('input[name=pay]:checked');
+  return {name, phone, addr, method: m ? m.value : 'card'};
+}
+function tossBad(t){
+  const bad = t.lines.find(l=>l.p.active===false || (l.p.owner && l.p.owner===state.session) || (l.p.kind==='own' && stockOf(l.p,l.size) < l.qty));
+  if(!bad) return false;
+  toast(bad.p.active===false ? `"${bad.p.name}" 판매가 중지된 상품이에요. 장바구니에서 삭제해 주세요` : (bad.p.owner && bad.p.owner===state.session) ? `"${bad.p.name}"은(는) 내가 올린 상품이라 구매할 수 없어요` : `"${bad.p.name}" ${bad.size} 재고가 부족해요 (남은 수량 ${stockOf(bad.p,bad.size)}개)`, 4500);
+  return true;
+}
+const _placeOrderSim = placeOrder;
+placeOrder = function(){
+  const t = cartTotals();
+  if(!tossReady() || !t.lines.every(l=>l.p.cloud)) return _placeOrderSim();
+  const info = tossForm(); if(!info) return;
+  if(tossBad(t)) return;
+  const btn = $('#payBtn'); if(btn){ btn.disabled = true; btn.textContent = '결제창을 여는 중…'; }
+  loadToss().then(()=> tossWidget() ? tossWidgetStep(info) : tossPay(info)).catch(e=>{ toast(e.message||'결제창을 열지 못했어요', 4500); if(btn){ btn.disabled = false; btn.textContent = `${won(t.total)} 결제하기`; } });
+};
+async function tossCreateOrder(info){
+  const t = cartTotals();
+  const srv = await cloudPlaceOrder(t, info.name, info.phone, info.addr, info.method, true);   // 서버가 가격·재고를 확정하고 '결제 대기' 주문을 만들어요
+  const lines = t.lines.map(l=>{ const it = srv.items.find(i=>i.product_id===l.p.id && i.size===l.size) || {}; return {pid:l.p.id, name:l.p.name, size:l.size, qty:l.qty, price:l.p.price, brand:l.p.brand, saleId:null, itemId:it.item_id}; });
+  try{ sessionStorage.setItem('cavia_pay', JSON.stringify({oid:srv.order_id, total:srv.total, subtotal:srv.subtotal, shipping:srv.shipping, method:info.method, name:info.name, addr:info.addr, lines})); }catch(e){}
+  return srv;
+}
+async function tossRelease(oid){ try{ await rpc('cancel_pending', {p_order:oid}); }catch(e){} try{ sessionStorage.removeItem('cavia_pay'); }catch(e){} cloudLoadProducts().then(()=>{ renderGrid(); renderCart(); }).catch(()=>{}); }
+const tossUrls = () => ({successUrl: authHome()+'?pay=ok', failUrl: authHome()+'?pay=fail'});
+// (A) API 개별 연동 키: 결제창 호출
+async function tossPay(info){
+  const t = cartTotals(); let srv;
+  try{ srv = await tossCreateOrder(info); }catch(e){ const b=$('#payBtn'); if(b){ b.disabled=false; b.textContent=`${won(t.total)} 결제하기`; } return toast(dbErr(e), 5000); }
+  const payment = window.TossPayments(TOSS_CLIENT_KEY).payment({customerKey: uid()});
+  const args = {method:'CARD', amount:{currency:'KRW', value:srv.total}, orderId:srv.order_id, orderName:tossOrderName(t), ...tossUrls(), customerName:info.name, customerMobilePhone:info.phone.replace(/\D/g,'')};
+  const easy = {kakao:'KAKAOPAY', naver:'NAVERPAY', toss:'TOSSPAY'}[info.method];
+  if(easy) args.card = {flowMode:'DIRECT', easyPay:easy};
+  try{ await payment.requestPayment(args); }
+  catch(e){ await tossRelease(srv.order_id); const b=$('#payBtn'); if(b){ b.disabled=false; b.textContent=`${won(t.total)} 결제하기`; } toast(e && e.code==='USER_CANCEL' ? '결제를 취소했어요' : ((e&&e.message)||'결제를 시작하지 못했어요'), 4500); }
+}
+// (B) 결제위젯 키: 결제 수단 UI를 모달 안에 표시
+async function tossWidgetStep(info){
+  const t = cartTotals();
+  showModal(`<div class="p-6 sm:p-8">${modalHead('PAYMENT', `${tossOrderName(t)} · ${won(t.total)}`)}
+    <div id="tossMethods"></div><div id="tossAgree"></div>
+    <button id="tossPayBtn" class="btn btn-neon w-full mt-4 !py-3.5 text-base" disabled>결제수단을 불러오는 중…</button></div>`);
+  let widgets;
+  try{
+    widgets = window.TossPayments(TOSS_CLIENT_KEY).widgets({customerKey: uid()});
+    await widgets.setAmount({currency:'KRW', value:t.total});
+    await Promise.all([widgets.renderPaymentMethods({selector:'#tossMethods', variantKey:'DEFAULT'}), widgets.renderAgreement({selector:'#tossAgree', variantKey:'AGREEMENT'})]);
+  }catch(e){ closeModal(); return toast((e&&e.message)||'결제창을 불러오지 못했어요', 4500); }
+  const b = $('#tossPayBtn'); if(!b) return; b.disabled = false; b.textContent = `${won(t.total)} 결제하기`;
+  b.onclick = async ()=>{
+    b.disabled = true; b.textContent = '결제 진행 중…'; let srv;
+    try{ srv = await tossCreateOrder(info); }catch(e){ b.disabled=false; b.textContent=`${won(t.total)} 결제하기`; return toast(dbErr(e), 5000); }
+    try{
+      if(srv.total !== t.total) await widgets.setAmount({currency:'KRW', value:srv.total});
+      await widgets.requestPayment({orderId:srv.order_id, orderName:tossOrderName(t), ...tossUrls(), customerName:info.name, customerMobilePhone:info.phone.replace(/\D/g,'')});
+    }catch(e){ await tossRelease(srv.order_id); if($('#tossPayBtn')){ b.disabled=false; b.textContent=`${won(t.total)} 결제하기`; } toast(e && e.code==='USER_CANCEL' ? '결제를 취소했어요' : ((e&&e.message)||'결제를 시작하지 못했어요'), 4500); }
+  };
+}
+// 토스 결제창에서 돌아왔을 때 (?pay=ok | ?pay=fail)
+async function handleTossReturn(){
+  const q = new URLSearchParams(location.search), pay = q.get('pay'); if(!pay) return;
+  let ctx = null; try{ ctx = JSON.parse(sessionStorage.getItem('cavia_pay') || 'null'); }catch(e){}
+  const paymentKey = q.get('paymentKey'), orderId = q.get('orderId') || (ctx && ctx.oid), amount = Number(q.get('amount')), msg = q.get('message');
+  try{ history.replaceState(null, '', authHome()); }catch(e){}
+  for(let i=0; i<40 && !cu(); i++) await new Promise(r=>setTimeout(r, 250));
+  if(!cu()) return toast('결제 확인을 위해 로그인해 주세요. 결제가 완료된 경우 주문 내역에서 확인할 수 있어요', 5000);
+  if(pay==='fail' || !paymentKey){ if(ctx) await tossRelease(ctx.oid); return toast(msg ? `결제가 완료되지 않았어요: ${msg}` : '결제가 취소되었어요', 4500); }
+  showModal(`<div class="p-10 text-center"><svg class="spin mx-auto" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 3a9 9 0 019 9" stroke-linecap="round"/></svg><p class="font-bold mt-4">결제를 확인하고 있어요</p><p class="text-sm text-neutral-500 mt-1">창을 닫지 말고 잠시만 기다려 주세요</p></div>`);
+  let res = null, err = null;
+  try{
+    const r = await sb.functions.invoke('toss-confirm', {body:{paymentKey, orderId, amount}});
+    if(r.error){ err = r.error; try{ if(r.error.context && r.error.context.json) err = {...await r.error.context.json()}; }catch(e){} } else res = r.data;
+  }catch(e){ err = e; }
+  if(res && res.ok){
+    if(ctx && ctx.oid===orderId){
+      state.orders.unshift({id:orderId, userId:state.session, ts:Date.now(), lines:ctx.lines, subtotal:ctx.subtotal, shipping:ctx.shipping, total:ctx.total, method:ctx.method, name:ctx.name, addr:ctx.addr, cloud:true, paid:true});
+      state.cart = []; state.coupon = false; save(); updateCartBadge(); renderCart(); closeCart();
+    }
+    try{ sessionStorage.removeItem('cavia_pay'); }catch(e){}
+    cloudLoadProducts().then(()=>renderGrid()).catch(()=>{});
+    return showModal(`<div class="p-8 text-center"><div class="w-16 h-16 rounded-full bg-neon mx-auto flex items-center justify-center text-3xl">✓</div><h2 class="font-display text-2xl font-bold mt-4">ORDER COMPLETE</h2><p class="text-neutral-500 mt-2 text-sm">결제가 완료되었어요<br>주문번호 <b class="text-black">${esc(orderId)}</b></p><p class="font-display text-2xl font-bold mt-3">${won(res.total)}</p>
+      <div class="grid grid-cols-2 gap-2 mt-6"><button class="btn btn-line" onclick="closeModal()">쇼핑 계속하기</button><button class="btn btn-dark" onclick="openOrders()">주문 내역</button></div></div>`);
+  }
+  const code = err && (err.error || err.code);
+  const definite = ['toss_declined','amount_mismatch','order_expired','verify_failed','order_not_found'].includes(code);
+  if(definite) await tossRelease(orderId);
+  const why = {toss_declined:'카드사에서 결제를 승인하지 않았어요', amount_mismatch:'결제 금액이 주문과 달라 처리하지 않았어요', order_expired:'주문 시간이 지나 결제가 취소되었어요. 다시 주문해 주세요', not_configured:'결제 서버가 아직 준비되지 않았어요'}[code];
+  showModal(`<div class="p-8 text-center"><div class="w-16 h-16 rounded-full bg-neutral-200 mx-auto flex items-center justify-center text-3xl">!</div><h2 class="font-bold text-lg mt-4">결제를 완료하지 못했어요</h2><p class="text-sm text-neutral-500 mt-2">${esc(why || (err && err.message) || '결제 확인 중 문제가 생겼어요')}${definite ? '' : '<br>결제가 이미 되었을 수 있으니 주문 내역을 먼저 확인해 주세요'}</p><button class="btn btn-dark mt-5" onclick="closeModal()">확인</button></div>`);
+}
+// 환불: 토스 결제 취소 → DB 환불 처리를 서버가 함께 수행
+const _refundOrderSim = refundOrder;
+refundOrder = async function(id){
+  const o = state.orders.find(x=>x.id===id);
+  if(o && o.cloud && o.paid && sb){
+    try{
+      const r = await sb.functions.invoke('toss-cancel', {body:{orderId:id, reason:'관리자 환불'}});
+      if(r.error){ let m = r.error.message; try{ const j = await r.error.context.json(); m = j.message || j.error || m; }catch(e){} return toast('환불에 실패했어요: ' + m, 5000); }
+    }catch(e){ return toast('환불에 실패했어요: ' + (e.message||e), 5000); }
+  }
+  return _refundOrderSim(id);
+};
 
 /* ============================================================
    리뷰 시스템 (구매 인증)
@@ -2465,7 +2594,7 @@ async function adminShipSample(id){
 }
 
 /* INIT */
-renderHero(); renderCats(); renderGrid(); renderAuthArea(); updateCartBadge(); renderCart(); initAuth(); cloudInit();
+renderHero(); renderCats(); renderGrid(); renderAuthArea(); updateCartBadge(); renderCart(); initAuth(); cloudInit(); handleTossReturn();
 </script>
 </body>
 </html>
