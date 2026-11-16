@@ -254,21 +254,6 @@ const GRAPHICS = {
   cross:{n:'ARCHIVE', svg:(i,a)=>`<path d="M14 14h12M20 8v12M74 14h12M80 8v12M14 86h12M20 80v12M74 86h12M80 80v12" stroke="${a}" stroke-width="3" stroke-linecap="round"/><text x="50" y="48" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="19" letter-spacing="2" fill="${i}">ARCHIVE</text><text x="50" y="72" text-anchor="middle" font-family="Space Grotesk,sans-serif" font-weight="700" font-size="26" fill="${a}" stroke="${i}" stroke-width="1">26</text>`}
 };
 
-const SEED = [
-  {id:'p1', name:'MELT DOWN 오버핏 후드', brand:'VOID CLUB', designer:'void.kim', base:'hoodie', color:'black', graphic:'smile', price:69000, sold:128, story:'녹아내리는 웃음은 월요일 아침의 나. 불안한데 웃고 있는 모두를 위한 그래픽입니다.'},
-  {id:'p2', name:'NO SIGNAL 헤비 맨투맨', brand:'STATIC SEOUL', designer:'jun.static', base:'sweat', color:'grey', graphic:'text', price:59000, sold:94, story:'지하철 터널에서 신호가 끊기던 순간의 정적. 연결되지 않을 자유를 입으세요.'},
-  {id:'p3', name:'ARCHIVE 26 박시 티', brand:'ARCHIVE LAB', designer:'min.archive', base:'tee', color:'white', graphic:'cross', price:39000, sold:211, story:'2026년을 기록하는 아카이브 시리즈 첫 번째 티셔츠입니다.'},
-  {id:'p4', name:'FLAME CHECK 후드 집업', brand:'HEAT WAVE', designer:'yuri.heat', base:'zip', color:'black', graphic:'flame', price:89000, sold:57, story:'겨울에도 식지 않는 열기. 지퍼를 올리면 불꽃이 가슴 위로 타오릅니다.'},
-  {id:'p5', name:'WIDE WAVE 데님 팬츠', brand:'BLUE HOUR', designer:'doyun.blue', base:'denim', color:'navy', graphic:'wave', price:79000, sold:43, story:'해 질 녘 한강의 물결을 허벅지에 새겼어요. 와이드 핏이라 파도가 더 크게 보입니다.'},
-  {id:'p6', name:'EYE SEE YOU 볼캡', brand:'PEEP SHOW', designer:'hana.peep', base:'cap', color:'black', graphic:'eye', price:32000, sold:76, story:'뒤를 돌아보는 당신을 지켜보는 눈. 데일리 캡이지만 시선은 강렬하게.'},
-  {id:'p7', name:'STAR BOY 티셔츠', brand:'NOVA KIDS', designer:'nova.park', base:'tee', color:'black', graphic:'star', price:42000, sold:165, story:'어릴 적 노트 모서리에 그리던 별. 그 낙서를 그대로 프린트했습니다.'},
-  {id:'p8', name:'GRID LOCK 맨투맨', brand:'BLOCK MOOD', designer:'seo.block', base:'sweat', color:'cream', graphic:'grid', price:55000, sold:38, story:'격자는 질서이자 감옥. 체크무늬를 한 칸씩 비워 숨 쉴 공간을 만들었어요.'},
-  {id:'p9', name:'SMILE AGAIN 티셔츠', brand:'VOID CLUB', designer:'void.kim', base:'tee', color:'cream', graphic:'smile', price:38000, sold:102, story:'멜팅 스마일의 라이트 버전. 조금 덜 무너진 하루를 위해.'},
-  {id:'p10', name:'HOT EYES 오버핏 후드', brand:'PEEP SHOW', designer:'hana.peep', base:'hoodie', color:'olive', graphic:'eye', price:72000, sold:29, story:'올리브 컬러 위에 네온 눈동자 하나. 어두운 곳에서도 눈에 띄는 후드입니다.'},
-  {id:'p11', name:'STATIC DENIM 팬츠', brand:'STATIC SEOUL', designer:'jun.static', base:'denim', color:'black', graphic:'text', price:82000, sold:21, story:'블랙 데님 한쪽 다리에 새긴 NO SIGNAL. 맨투맨과 세트로 입어도 좋아요.'},
-  {id:'p12', name:'FLAME 볼캡', brand:'HEAT WAVE', designer:'yuri.heat', base:'cap', color:'olive', graphic:'flame', price:34000, sold:64, story:'작은 불꽃 하나로 완성되는 룩. 모자 하나로 분위기를 바꿔보세요.'},
-  {id:'p13', name:'GRID ZIP 후드 집업', brand:'BLOCK MOOD', designer:'seo.block', base:'zip', color:'navy', graphic:'grid', price:92000, sold:33, story:'네이비 집업 가슴 위의 작은 그리드. 단정한데 어딘가 어긋난 느낌이 포인트.'}
-];
 
 /* ============================================================
    STATE
@@ -278,11 +263,13 @@ function fresh(){
   const now = Date.now();
   return {
     users:[], session:null,
-    products: SEED.map((p,i)=>({...p, photo:'photos/'+p.id+'.jpg', cost:BASES[p.base].cost, earn:calc(p.price,BASES[p.base].cost).net, owner:null, active:true, createdAt:now-(i+1)*172800000})),
+    products: [],   // 샘플 상품 없음 (오픈 준비중)
     likes:[], cart:[], orders:[], sales:[], withdrawals:[]
   };
 }
-function loadState(){ try{ const s=JSON.parse(localStorage.getItem(STORE)); if(s&&s.products){ s.products.forEach(p=>{ if(!p.owner && p.photo===undefined) p.photo='photos/'+p.id+'.jpg'; }); return s; } }catch(e){} return fresh(); }
+function loadState(){ try{ const s=JSON.parse(localStorage.getItem(STORE)); if(s&&s.products){ s.products = s.products.filter(p=>!( !p.owner && !p.cloud && !p.demo && /^p\d+$/.test(p.id) ));   // 예전 샘플 상품 제거
+    s.cart = (s.cart||[]).filter(l=>s.products.some(p=>p.id===l.pid)); s.likes = (s.likes||[]).filter(id=>s.products.some(p=>p.id===id));
+    s.products.forEach(p=>{ if(!p.owner && p.photo===undefined) p.photo='photos/'+p.id+'.jpg'; }); return s; } }catch(e){} return fresh(); }
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){ toast('저장 공간이 부족해 일부 데이터가 저장되지 않았어요'); } }
 let state = loadState();
 const PRICE_BANDS = {all:null, u40:[0,40000], m60:[40001,60000], m80:[60001,80000], o80:[80001,1e9]};
@@ -450,8 +437,14 @@ function renderQuick(){
   ];
   $('#quickGrid').innerHTML = items.map(i=>`<button onclick="quick('${i[0]}')" class="bg-white border-2 border-black rounded-2xl py-3.5 px-2 text-center hover:bg-neon hover:-translate-y-0.5 transition"><p class="font-bold text-sm mt-1">${i[2]}</p><p class="text-[11px] text-neutral-500">${i[3]}</p></button>`).join('');
 }
+
+/* ---------- 오픈 준비중 (등록된 상품이 없을 때) ---------- */
+const hasProducts = () => state.products.some(p=>p.active!==false);
+const soonTile = (cls='aspect-[4/5]', big=true) => `<div class="relative ${cls} rounded-md overflow-hidden bg-black flex flex-col items-center justify-center text-center select-none"><p class="font-display font-bold text-neon ${big?'text-2xl sm:text-3xl':'text-base sm:text-lg'} leading-tight px-2">1월 오픈 예정</p><p class="${big?'text-[11px]':'text-[10px]'} tracking-[.25em] text-white/40 mt-2 font-display">CAVIA</p></div>`;
+const soonCard = () => `<article class="cursor-default">${soonTile()}<div class="mt-2.5 px-0.5"><p class="text-[11px] font-bold tracking-wider text-neutral-400">CAVIA</p><h3 class="font-semibold leading-snug mt-0.5">오픈 준비중</h3><p class="text-sm text-neutral-400 mt-1">1월 오픈 예정</p></div></article>`;
 function renderBest(){
   const list = state.products.filter(p=>p.active!==false).sort((a,b)=>b.sold-a.sold).slice(0,8);
+  if(!list.length){ $('#bestRow').innerHTML = [1,2,3,4].map(()=>`<div class="w-40 sm:w-48 shrink-0">${soonTile()}<h3 class="font-semibold mt-2.5 text-sm">오픈 준비중</h3><p class="text-xs text-neutral-400 mt-0.5">1월 오픈 예정</p></div>`).join(''); return; }
   $('#bestRow').innerHTML = list.map((p,i)=>`<div class="w-40 sm:w-48 shrink-0 cursor-pointer" onclick="openProduct('${p.id}')"><div class="relative aspect-[4/5] rounded-md overflow-hidden" style="background:${tileBg(p)}"><div class="absolute inset-0 ${p.photo?'':'p-4'}">${pSVG(p)}</div><span class="absolute top-0 left-0 bg-black text-neon font-display font-bold text-lg px-2.5 py-1">${i+1}</span></div><p class="font-display text-[10px] tracking-widest text-neutral-500 font-bold mt-2">${esc(p.brand)}</p><p class="text-sm font-semibold leading-snug line-clamp-1">${esc(p.name)}</p><p class="font-display font-bold">${won(p.price)}</p></div>`).join('');
 }
 function renderFilters(){
@@ -476,9 +469,9 @@ function claimCoupon(){
 function renderGrid(){
   renderFilters(); renderQuick(); renderBest();
   const list = visibleProducts();
-  $('#productGrid').innerHTML = list.length ? list.map(cardHTML).join('') :
+  $('#productGrid').innerHTML = !hasProducts() ? [1,2,3,4,5,6,7,8].map(soonCard).join('') : list.length ? list.map(cardHTML).join('') :
     `<div class="col-span-full text-center py-20 text-neutral-500"><p class="font-semibold">조건에 맞는 상품이 없어요</p><button class="btn btn-dark mt-4" onclick="resetFilters()">필터 초기화</button></div>`;
-  $('#resultCount').textContent = `${CATS.find(c=>c.id===ui.cat).label} · ${list.length}개 상품`;
+  $('#resultCount').textContent = hasProducts() ? `${CATS.find(c=>c.id===ui.cat).label} · ${list.length}개 상품` : '오픈 준비중 · 1월 오픈 예정';
   $('#likeToggle').className = 'chip flex items-center gap-1.5 ' + (ui.likesOnly?'on':'');
   $('#sortSel').value = ui.sort;
 }
@@ -488,8 +481,8 @@ function toggleLike(id){
   save(); renderGrid(); if(ui.pm && ui.pm.id===id && !$('#modal').classList.contains('hidden')) renderProductModal();
 }
 function renderHero(){
-  const picks = ['p1','p7','p4','p6'].map(prod).filter(Boolean);
-  $('#heroArt').innerHTML = picks.map(p=>`<div class="relative overflow-hidden aspect-square rounded-lg p-3 cursor-pointer hover:scale-[1.03] transition" style="background:${tileBg(p)}" onclick="openProduct('${p.id}')">${pSVG(p)}</div>`).join('');
+  const picks = state.products.filter(p=>p.active!==false).sort((a,b)=>b.sold-a.sold).slice(0,4);
+  $('#heroArt').innerHTML = picks.map(p=>`<div class="relative overflow-hidden aspect-square rounded-lg p-3 cursor-pointer hover:scale-[1.03] transition" style="background:${tileBg(p)}" onclick="openProduct('${p.id}')">${pSVG(p)}</div>`).join('') + [...Array(4-picks.length)].map(()=>soonTile('aspect-square', false).replace('rounded-md','rounded-lg')).join('');
   const t = ['NEW DROP EVERY FRIDAY','NO STOCK · NO WASTE','CREATOR OWNED','PRINT ON DEMAND','OPEN YOUR BRAND TODAY'];
   const row = t.map(x=>`<span class="mx-8">${x} <span class="text-neon">/</span></span>`).join('');
   $('#marquee').innerHTML = `<div class="flex">${row}</div><div class="flex">${row}</div>`;
@@ -1350,7 +1343,14 @@ function openAdminLogin(){ toast('관리자는 관리자 권한이 있는 계정
 function adminLogout(){ ui.admin = false; try{ sessionStorage.removeItem('cavia_admin'); }catch(e){} setView('market'); toast('관리자에서 로그아웃했어요'); }
 
 function renderAdmin(keep){
-  if(!(isCloud() && cu())){ ui.admin = false; renderAuthArea(); setView('market'); toast('관리자는 관리자 계정으로 로그인해야 볼 수 있어요'); return; }
+  if(!me()){ ui.admin = false; renderAuthArea(); setView('market'); toast('관리자는 관리자 계정으로 로그인해야 볼 수 있어요'); return; }
+  if(!cu()){   // DB 연결이 확인되기 전에는 로컬 데이터를 보여주지 않고 잠시 기다려요
+    ui._admWait = (ui._admWait||0) + 1;
+    $('#adminMain').innerHTML = ui._admWait > 20 ? '<div class="bg-white border rounded-2xl p-8 text-center"><p class="font-bold">데이터베이스에 연결하지 못했어요</p><button class="btn btn-dark mt-4" onclick="ui._admWait=0;renderAdmin(true)">다시 시도</button></div>' : '<div class="bg-white border rounded-2xl p-10 text-center text-neutral-400 text-sm">데이터베이스에 연결하는 중…</div>';
+    if(ui._admWait <= 20) setTimeout(()=>{ if(ui.view==='admin') renderAdmin(true); }, 600);
+    return;
+  }
+  ui._admWait = 0;
   const nav = [['overview','','개요'],['users','','회원 관리'],['orders','','주문 · 결제'],['sellers','','판매자 · 정산'],['products','','상품 관리'],['samples','','샘플 주문']];
   const pendingWd = state.withdrawals.filter(w=>w.status!=='paid').length;
   $('#adminSide').innerHTML = `<div class="bg-black text-white rounded-2xl p-5 grain"><p class="font-display text-neon text-[11px] tracking-[.2em]">ADMIN CONSOLE</p><p class="font-display text-3xl font-bold lowercase mt-1">cav<span class="text-neon">ia</span></p><p class="text-xs text-neutral-500 mt-1">운영 관리자</p></div>
@@ -1734,13 +1734,20 @@ async function cloudAfterLogin(){
 }
 
 const _cloudAfterLogin = cloudAfterLogin;
-cloudAfterLogin = async function(){
-  await _cloudAfterLogin();
-  let ok = false; try{ if(cu()) ok = !!(await rpc('is_admin')); }catch(e){}
-  ui.admin = ok; renderAuthArea(); if(!ok && ui.view==='admin') setView('market');
-};
+let _admSeqCheck = 0, _admChecked = {};   // 계정별 관리자 확인 결과를 기억해서 버튼이 깜빡이지 않게 해요
+async function checkAdminRole(){
+  const u = me(); const seq = ++_admSeqCheck;
+  if(!u){ ui.admin = false; renderAuthArea(); return; }
+  if(_admChecked[u.id] === true && !ui.admin){ ui.admin = true; renderAuthArea(); }   // 이미 관리자로 확인된 계정은 바로 표시
+  let ok = null; try{ ok = !!(await rpc('is_admin')); }catch(e){ ok = null; }          // 일시적 오류(null)는 결과를 바꾸지 않아요
+  if(seq !== _admSeqCheck || me() !== u) return;
+  if(ok === null) return;
+  _admChecked[u.id] = ok;
+  if(ui.admin !== ok){ ui.admin = ok; renderAuthArea(); if(!ok && ui.view==='admin') setView('market'); }
+}
+cloudAfterLogin = async function(){ await _cloudAfterLogin(); await checkAdminRole(); };
 const _logoutBase = logout;
-logout = async function(){ ui.admin = false; return _logoutBase(); };
+logout = async function(){ ui.admin = false; _admSeqCheck++; return _logoutBase(); };
 
 /* --- 기존 함수에 클라우드 반영 (원래 동작은 그대로 실행한 뒤 DB에 이어서 반영) --- */
 const _syncAuthUser = syncAuthUser;
@@ -1786,7 +1793,7 @@ async function cloudPlaceOrder(t, name, phone, addr, method, pending){
 ============================================================ */
 // 토스페이먼츠 개발자센터의 "클라이언트 키"를 넣으세요: 결제위젯 키(test_gck_...) 또는 API 개별 연동 키(test_ck_...)
 // 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
-const TOSS_CLIENT_KEY = 'test_ck_c19yAOlsB7TbI094HX9ED19bx59BJnGEEt';
+const TOSS_CLIENT_KEY = '';
 const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
 const tossWhy = () => !/^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) ? (/_sk_|_gsk_/.test(TOSS_CLIENT_KEY) ? '시크릿 키가 들어 있어요(클라이언트 키로 바꿔 주세요)' : '클라이언트 키가 아직 코드에 없어요') : !sb ? '데이터베이스에 연결되지 않았어요' : !cu() ? '이 계정은 DB 계정이 아니에요(로그아웃 후 구글로 다시 로그인해 주세요)' : '';
 const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
