@@ -1793,7 +1793,7 @@ async function cloudPlaceOrder(t, name, phone, addr, method, pending){
 ============================================================ */
 // 토스페이먼츠 개발자센터의 "클라이언트 키"를 넣으세요: 결제위젯 키(test_gck_...) 또는 API 개별 연동 키(test_ck_...)
 // 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
-const TOSS_CLIENT_KEY = '';
+const TOSS_CLIENT_KEY = 'test_ck_c19yAOlsB7TbI094HX9ED19bx59BJnGEEt';
 const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
 const tossWhy = () => !/^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) ? (/_sk_|_gsk_/.test(TOSS_CLIENT_KEY) ? '시크릿 키가 들어 있어요(클라이언트 키로 바꿔 주세요)' : '클라이언트 키가 아직 코드에 없어요') : !sb ? '데이터베이스에 연결되지 않았어요' : !cu() ? '이 계정은 DB 계정이 아니에요(로그아웃 후 구글로 다시 로그인해 주세요)' : '';
 const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
