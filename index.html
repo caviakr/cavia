@@ -159,8 +159,8 @@ tailwind.config = { theme: { extend: { colors: { neon: '#C6FF00' }, fontFamily: 
         <span class="flex flex-wrap gap-x-5 gap-y-2 text-neutral-300"><button onclick="openPolicy('terms')" class="hover:text-neon">이용약관</button><button onclick="openPolicy('privacy')" class="font-bold text-white hover:text-neon">개인정보처리방침</button><button onclick="openPolicy('refund')" class="hover:text-neon">교환 및 환불 정책</button></span>
       </div>
       <div class="mt-5 pt-5 border-t border-white/10 text-xs leading-relaxed space-y-1">
-        <p>상호 카비아(cavia) · 대표 홍길동 · 사업자등록번호 000-00-00000 · 통신판매업신고 제0000-서울강남-0000호</p>
-        <p>주소 서울특별시 강남구 테헤란로 0 · 고객센터 00000000000 · 이메일 help@cavia.example</p>
+        <p>상호 카비아(cavia) · 대표 김태윤 · 사업자등록번호 000-00-00000 · 통신판매업신고 제0000-서울강남-0000호</p>
+        <p>주소 가온로 245 · 고객센터 01058648767 · 이메일 ohmyginius@gmail.com</p>
         <p>운영시간 평일 10:00–17:00 (점심 12:00–13:00, 주말·공휴일 휴무)</p>
       </div>
       <div class="mt-4 flex flex-wrap gap-4 justify-between items-center text-xs">
@@ -717,7 +717,7 @@ function renderAuth(){
 }
 
 /* ---------- 약관 / 방침 / 환불 정책 ---------- */
-const BIZ = {name:'카비아(cavia)', ceo:'홍길동', reg:'000-00-00000', mail_order:'제0000-서울강남-0000호', addr:'서울특별시 강남구 테헤란로 0', tel:'00000000000', email:'help@cavia.example', date:'2026년 11월 15일'};
+const BIZ = {name:'카비아(cavia)', ceo:'김태윤', reg:'000-00-00000', mail_order:'제0000-서울강남-0000호', addr:'가온로 245', tel:'01058648767', email:'ohmyginius@gmail.com', date:'2026년 11월 15일'};
 const POLICIES = {
   terms: {title:'이용약관', body:[
     ['제1조 (목적)', `이 약관은 ${BIZ.name}(이하 "회사")가 운영하는 cavia(이하 "서비스")에서 회원과 회사 간의 권리, 의무 및 책임사항을 정하는 것을 목적으로 해요.`],
@@ -1793,7 +1793,7 @@ async function cloudPlaceOrder(t, name, phone, addr, method, pending){
 ============================================================ */
 // 토스페이먼츠 개발자센터의 "클라이언트 키"를 넣으세요: 결제위젯 키(test_gck_...) 또는 API 개별 연동 키(test_ck_...)
 // 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
-const TOSS_CLIENT_KEY = 'test_ck_c19yAOlsB7TbI094HX9ED19bx59BJnGEEt';
+const TOSS_CLIENT_KEY = '';
 const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
 const tossWhy = () => !/^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) ? (/_sk_|_gsk_/.test(TOSS_CLIENT_KEY) ? '시크릿 키가 들어 있어요(클라이언트 키로 바꿔 주세요)' : '클라이언트 키가 아직 코드에 없어요') : !sb ? '데이터베이스에 연결되지 않았어요' : !cu() ? '이 계정은 DB 계정이 아니에요(로그아웃 후 구글로 다시 로그인해 주세요)' : '';
 const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
@@ -2721,6 +2721,18 @@ async function adminShipSample(id){
 }
 
 /* INIT */
+/* ===== 오픈 전 잠금: 정식 오픈(1월) 전까지 판매·구매 막기. 오픈 때 SALES_OPEN = true 로 바꾸세요 ===== */
+const SALES_OPEN = false;
+const soonPanel = () => `<div class="bg-black text-white rounded-2xl grain px-6 py-16 sm:py-24 text-center"><p class="font-display text-neon text-[11px] tracking-[.25em]">CAVIA</p><h1 class="font-display text-3xl sm:text-5xl font-bold mt-3 leading-tight">상품 등록 준비중</h1><p class="text-neutral-300 mt-4 text-sm sm:text-base">1월 정식 오픈에 맞춰 크리에이터 스튜디오가 열려요.<br>조금만 기다려 주세요.</p><button class="btn btn-neon mt-8" onclick="setView('market')">쇼핑 둘러보기</button></div>`;
+if(!SALES_OPEN){
+  const _rs0 = renderStudio;
+  renderStudio = function(){ const s=$('#studioSide'); if(s) s.innerHTML=''; const m=$('#studioMain'); if(m) m.innerHTML = soonPanel(); };
+  const _st0 = startSell;
+  startSell = function(){ const m=$('#userMenu'); if(m) m.classList.add('hidden'); if(!me()){ toast('먼저 로그인해 주세요'); openAuth('sell'); return; } closeModal(); setView('studio'); };
+  addToCart = function(){ toast('1월 정식 오픈 후 구매할 수 있어요', 3500); return false; };
+  openCheckout = function(){ toast('1월 정식 오픈 후 구매할 수 있어요', 3500); };
+  placeOrder = function(){ toast('1월 정식 오픈 후 구매할 수 있어요', 3500); };
+}
 renderHero(); renderCats(); renderGrid(); renderAuthArea(); updateCartBadge(); renderCart(); initAuth(); cloudInit(); handleTossReturn();
 </script>
 </body>
