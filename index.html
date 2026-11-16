@@ -1793,7 +1793,7 @@ async function cloudPlaceOrder(t, name, phone, addr, method, pending){
 ============================================================ */
 // 토스페이먼츠 개발자센터의 "클라이언트 키"를 넣으세요: 결제위젯 키(test_gck_...) 또는 API 개별 연동 키(test_ck_...)
 // 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
-const TOSS_CLIENT_KEY = 'test_ck_c19yAOlsB7TbI094HX9ED19bx59BJnGEEt';
+const TOSS_CLIENT_KEY = '';
 const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
 const tossWhy = () => !/^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) ? (/_sk_|_gsk_/.test(TOSS_CLIENT_KEY) ? '시크릿 키가 들어 있어요(클라이언트 키로 바꿔 주세요)' : '클라이언트 키가 아직 코드에 없어요') : !sb ? '데이터베이스에 연결되지 않았어요' : !cu() ? '이 계정은 DB 계정이 아니에요(로그아웃 후 구글로 다시 로그인해 주세요)' : '';
 const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
@@ -2723,12 +2723,11 @@ async function adminShipSample(id){
 /* INIT */
 /* ===== 오픈 전 잠금: 정식 오픈(1월) 전까지 판매·구매 막기. 오픈 때 SALES_OPEN = true 로 바꾸세요 ===== */
 const SALES_OPEN = false;
-const soonPanel = () => `<div class="bg-black text-white rounded-2xl grain px-6 py-16 sm:py-24 text-center"><p class="font-display text-neon text-[11px] tracking-[.25em]">CAVIA</p><h1 class="font-display text-3xl sm:text-5xl font-bold mt-3 leading-tight">상품 등록 준비중</h1><p class="text-neutral-300 mt-4 text-sm sm:text-base">1월 정식 오픈에 맞춰 크리에이터 스튜디오가 열려요.<br>조금만 기다려 주세요.</p><button class="btn btn-neon mt-8" onclick="setView('market')">쇼핑 둘러보기</button></div>`;
+const soonPanel = (h,d,btn,fn) => `<div class="bg-black text-white rounded-2xl grain px-6 py-16 sm:py-24 text-center"><p class="font-display text-neon text-[11px] tracking-[.25em]">CAVIA</p><h1 class="font-display text-3xl sm:text-5xl font-bold mt-3 leading-tight">${h}</h1><p class="text-neutral-300 mt-4 text-sm sm:text-base">${d}</p><button class="btn btn-neon mt-8" onclick="${fn}">${btn}</button></div>`;
 if(!SALES_OPEN){
-  const _rs0 = renderStudio;
-  renderStudio = function(){ const s=$('#studioSide'); if(s) s.innerHTML=''; const m=$('#studioMain'); if(m) m.innerHTML = soonPanel(); };
-  const _st0 = startSell;
-  startSell = function(){ const m=$('#userMenu'); if(m) m.classList.add('hidden'); if(!me()){ toast('먼저 로그인해 주세요'); openAuth('sell'); return; } closeModal(); setView('studio'); };
+  /* 상품 등록(DROP)·내 옷 바로 판매 탭만 막고, 대시보드·정산·성장 등은 그대로 보여줘요 */
+  const _rd0 = renderDrop;
+  renderDrop = function(){ const m=$('#studioMain'); if(m) m.innerHTML = soonPanel('상품 등록 준비중','1월 정식 오픈에 맞춰 상품 등록이 열려요.<br>조금만 기다려 주세요.','대시보드로 돌아가기',"ui.tab='home';renderStudio()"); };
   addToCart = function(){ toast('1월 정식 오픈 후 구매할 수 있어요', 3500); return false; };
   openCheckout = function(){ toast('1월 정식 오픈 후 구매할 수 있어요', 3500); };
   placeOrder = function(){ toast('1월 정식 오픈 후 구매할 수 있어요', 3500); };
