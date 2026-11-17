@@ -34,6 +34,11 @@ tailwind.config = { theme: { extend: { colors: { neon: '#C6FF00' }, fontFamily: 
   .sel.on{border-color:#0a0a0a;box-shadow:0 0 0 3px #C6FF00}
   @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .marquee{display:flex;width:max-content;animation:marquee 30s linear infinite}
+  .navtab{font-weight:700;font-size:14px;padding:6px 10px;border-bottom:2px solid transparent;color:#a3a3a3;white-space:nowrap}
+  .navtab:hover{color:#fff}.navtab.on{color:#fff;border-bottom-color:#C6FF00}
+  .ibtn{display:inline-flex;align-items:center;gap:6px}
+  details.faq summary{cursor:pointer;list-style:none}details.faq summary::-webkit-details-marker{display:none}
+  details.faq[open] .pl{transform:rotate(45deg)}
   @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
   .shake{animation:shake .35s}
   @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.4)}100%{transform:scale(1)}}
@@ -60,8 +65,12 @@ tailwind.config = { theme: { extend: { colors: { neon: '#C6FF00' }, fontFamily: 
 </div>
 <header class="sticky top-0 z-40 bg-black text-white">
   <div class="max-w-7xl mx-auto px-4 h-16 flex items-center gap-2 sm:gap-3">
-    <button onclick="goMarket()" class="font-display text-3xl font-bold tracking-tight mr-auto lowercase">cav<span class="text-neon">ia</span></button>
-    <button onclick="openGrowth()" class="btn !text-white hover:!text-neon !px-2 sm:!px-3 !py-2 !text-[13px] sm:!text-sm"><span>성장센터</span></button>
+    <button onclick="goIntro()" class="font-display text-3xl font-bold tracking-tight lowercase">cav<span class="text-neon">ia</span></button>
+    <nav class="mr-auto flex items-center gap-0.5 sm:gap-1 ml-1 sm:ml-4" aria-label="주요 메뉴">
+      <button id="tabIntro" onclick="goIntro()" class="navtab">소개</button>
+      <button id="tabMarket" onclick="goMarket()" class="navtab">마켓</button>
+    </nav>
+    <button onclick="openGrowth()" class="hidden sm:inline-flex btn !text-white hover:!text-neon !px-2 sm:!px-3 !py-2 !text-[13px] sm:!text-sm"><span>성장센터</span></button>
     <button onclick="startSell()" class="hidden sm:inline-flex btn btn-line !text-white !border-white/40 hover:!bg-neon hover:!text-black hover:!border-neon !py-2">내 디자인 판매하기</button>
     <button id="cartBtn" onclick="openCart()" class="relative p-2 hover:text-neon transition" aria-label="장바구니">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h3l2.4 12.2a1.5 1.5 0 001.5 1.2h9.2a1.5 1.5 0 001.5-1.1L21 7H6"/><circle cx="9.5" cy="20.5" r="1.4"/><circle cx="17.5" cy="20.5" r="1.4"/></svg>
@@ -71,8 +80,143 @@ tailwind.config = { theme: { extend: { colors: { neon: '#C6FF00' }, fontFamily: 
   </div>
 </header>
 
+<!-- ================= INTRO VIEW ================= -->
+<main id="introView">
+  <!-- 1. hero -->
+  <section class="bg-black text-white grain overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 pt-16 pb-14 sm:pt-28 sm:pb-24">
+      <p class="inline-block border border-neon text-neon font-display text-xs tracking-[.25em] px-3 py-1 rounded-full">1월 정식 오픈 예정</p>
+      <h1 class="font-display font-bold leading-[.9] tracking-tight mt-6 text-[17vw] sm:text-[9rem]">WEAR<br>YOUR OWN<br><span class="text-neon">DROP.</span></h1>
+      <p class="mt-8 text-neutral-300 max-w-xl text-base sm:text-xl leading-relaxed">재고 없이, 내 그래픽 한 장으로 브랜드를 시작하세요.<br>디자이너가 직접 올리고, 주문이 들어오면 그때 제작돼요.</p>
+      <div class="mt-9 flex flex-wrap gap-3"><button onclick="goMarket()" class="btn btn-neon ibtn">마켓 구경하기 <span aria-hidden="true">→</span></button><button onclick="document.getElementById('introWhy').scrollIntoView({behavior:'smooth'})" class="btn btn-line !text-white !border-white/50 hover:!bg-white hover:!text-black">cavia가 뭐예요? ↓</button></div>
+    </div>
+    <div class="border-y border-white/15 py-2.5 overflow-hidden font-display text-sm tracking-widest text-neutral-300"><div class="marquee" id="introMarquee"></div></div>
+  </section>
+
+  <!-- 2. manifesto -->
+  <section id="introWhy" class="max-w-5xl mx-auto px-4 py-20 sm:py-32 scroll-mt-20">
+    <p class="font-display text-xs tracking-[.3em] text-neutral-500">MANIFESTO</p>
+    <h2 class="font-display font-bold text-4xl sm:text-7xl leading-[1.02] tracking-tight mt-4">옷은 많은데<br>입고 싶은 옷은<br><span class="bg-neon px-2">없었잖아요.</span></h2>
+    <div class="mt-10 grid sm:grid-cols-2 gap-6 text-neutral-700 text-base sm:text-lg leading-relaxed">
+      <p>브랜드를 만들고 싶은 사람은 많은데, 막상 시작하려면 재고 걱정, 공장 연락, 최소 주문 수량, 초기 자금이라는 벽이 먼저 나와요. 그래서 좋은 그래픽이 서랍 속에서 끝나는 일이 정말 많아요.</p>
+      <p>cavia는 그 벽을 없앴어요. 그래픽 한 장과 가격만 정하면 브랜드가 열리고, 주문이 들어오면 그때 한 벌씩 만들어요. 팔리지 않은 옷이 쌓일 일이 없어요.</p>
+    </div>
+    <div class="mt-10"><button onclick="goMarket()" class="btn btn-dark ibtn">마켓에서 지금 드랍 보기 <span aria-hidden="true">→</span></button></div>
+  </section>
+
+  <!-- 3. numbers -->
+  <section class="bg-neon">
+    <div class="max-w-7xl mx-auto px-4 py-14 sm:py-20 grid sm:grid-cols-3 gap-8 sm:gap-6">
+      <div><p class="font-display font-bold text-7xl sm:text-8xl leading-none">0<span class="text-3xl">개</span></p><p class="font-bold mt-2">미리 만들어 둘 재고</p><p class="text-sm text-black/70 mt-1">주문이 들어와야 제작을 시작해요.</p></div>
+      <div><p class="font-display font-bold text-7xl sm:text-8xl leading-none">0<span class="text-3xl">원</span></p><p class="font-bold mt-2">초기 제작 비용</p><p class="text-sm text-black/70 mt-1">제작 원가는 판매 대금에서 정산돼요.</p></div>
+      <div><p class="font-display font-bold text-7xl sm:text-8xl leading-none">1<span class="text-3xl">장</span></p><p class="font-bold mt-2">시작에 필요한 그래픽</p><p class="text-sm text-black/70 mt-1">내 그래픽 한 장이면 충분해요.</p></div>
+    </div>
+  </section>
+
+  <!-- 4. how it works -->
+  <section class="max-w-7xl mx-auto px-4 py-20 sm:py-32">
+    <p class="font-display text-xs tracking-[.3em] text-neutral-500">HOW IT WORKS</p>
+    <h2 class="font-display font-bold text-4xl sm:text-6xl leading-tight mt-3">4단계면 끝.</h2>
+    <div class="mt-10 grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-black text-white rounded-3xl p-6 grain min-h-[240px] flex flex-col"><span class="font-display text-neon text-5xl font-bold">01</span><h3 class="font-bold text-xl mt-auto">브랜드 개설</h3><p class="text-sm text-neutral-400 mt-2 leading-relaxed">브랜드 이름과 정산 계좌를 등록하면 나만의 스튜디오가 열려요.</p></div>
+      <div class="bg-black text-white rounded-3xl p-6 grain min-h-[240px] flex flex-col"><span class="font-display text-neon text-5xl font-bold">02</span><h3 class="font-bold text-xl mt-auto">디자인 업로드</h3><p class="text-sm text-neutral-400 mt-2 leading-relaxed">티셔츠, 후디 등 베이스를 고르고 에디터에서 그래픽을 끌어다 놓아요.</p></div>
+      <div class="bg-black text-white rounded-3xl p-6 grain min-h-[240px] flex flex-col"><span class="font-display text-neon text-5xl font-bold">03</span><h3 class="font-bold text-xl mt-auto">가격 정하고 드랍</h3><p class="text-sm text-neutral-400 mt-2 leading-relaxed">내가 남길 몫을 정하면 판매가가 계산돼요. 등록하면 바로 마켓에 올라가요.</p></div>
+      <div class="bg-black text-white rounded-3xl p-6 grain min-h-[240px] flex flex-col"><span class="font-display text-neon text-5xl font-bold">04</span><h3 class="font-bold text-xl mt-auto">팔리면 제작 · 정산</h3><p class="text-sm text-neutral-400 mt-2 leading-relaxed">주문이 들어오면 제작과 배송이 진행되고, 구매 확정 후 정산돼요.</p></div>
+    </div>
+    <div class="mt-8 flex flex-wrap gap-3"><button onclick="goMarket()" class="btn btn-neon ibtn">마켓 둘러보기 <span aria-hidden="true">→</span></button><button onclick="startSell()" class="btn btn-dark">내 디자인 판매하기</button></div>
+  </section>
+
+  <!-- 5. editor -->
+  <section class="bg-black text-white grain">
+    <div class="max-w-7xl mx-auto px-4 py-20 sm:py-32 grid lg:grid-cols-2 gap-10 items-center">
+      <div>
+        <p class="font-display text-neon text-xs tracking-[.3em]">DESIGN EDITOR</p>
+        <h2 class="font-display font-bold text-4xl sm:text-6xl leading-tight mt-3">끌어다 놓으면<br>옷이 돼요.</h2>
+        <p class="text-neutral-300 mt-6 leading-relaxed text-base sm:text-lg">그래픽을 올리고 손가락이나 마우스로 옮기고, 크기를 키우고, 회전하세요. 인쇄가 가능한 영역이 점선으로 표시돼서 어디까지 찍힐지 미리 알 수 있어요. 색상도 바로 바꿔볼 수 있고요.</p>
+        <ul class="mt-6 space-y-2 text-neutral-300"><li>✓ 티셔츠, 후디 등 여러 베이스</li><li>✓ 위치 · 크기 · 회전 · 좌우반전</li><li>✓ 올리기 전에 실제 모습으로 확인</li></ul>
+      </div>
+      <div class="rounded-3xl bg-white/5 border border-white/15 p-8 sm:p-12 text-center"><p class="font-display text-7xl sm:text-9xl font-bold text-neon leading-none">DROP</p><p class="mt-4 text-sm text-neutral-400 tracking-[.25em] font-display">YOUR GRAPHIC · YOUR RULES</p></div>
+    </div>
+  </section>
+
+  <!-- 6. for buyers -->
+  <section class="max-w-7xl mx-auto px-4 py-20 sm:py-32">
+    <p class="font-display text-xs tracking-[.3em] text-neutral-500">FOR BUYERS</p>
+    <h2 class="font-display font-bold text-4xl sm:text-6xl leading-tight mt-3">남들이랑<br>겹치지 않는 옷.</h2>
+    <div class="mt-10 grid md:grid-cols-3 gap-4">
+      <div class="border-2 border-black rounded-3xl p-6 bg-white"><h3 class="font-bold text-xl">디자이너가 직접 올려요</h3><p class="text-neutral-600 mt-2 leading-relaxed">대량 생산 라인이 아니라 크리에이터 한 명 한 명이 만든 브랜드의 옷이에요.</p></div>
+      <div class="border-2 border-black rounded-3xl p-6 bg-white"><h3 class="font-bold text-xl">첫 구매 10% 쿠폰</h3><p class="text-neutral-600 mt-2 leading-relaxed">가입하고 첫 주문이면 자동으로 쿠폰이 적용돼요. 50,000원 이상 구매하면 배송비도 무료예요.</p></div>
+      <div class="border-2 border-black rounded-3xl p-6 bg-white"><h3 class="font-bold text-xl">진짜 구매자만 리뷰</h3><p class="text-neutral-600 mt-2 leading-relaxed">리뷰는 실제로 구매한 사람만 쓸 수 있어서, 후기를 믿고 고를 수 있어요.</p></div>
+    </div>
+    <div class="mt-8"><button onclick="goMarket()" class="btn btn-dark ibtn">마켓 구경하러 가기 <span aria-hidden="true">→</span></button></div>
+  </section>
+
+  <!-- 7. drop preview -->
+  <section class="bg-[#e9e9e4]">
+    <div class="max-w-7xl mx-auto px-4 py-16 sm:py-24">
+      <div class="flex items-end justify-between gap-3 mb-6"><div><p class="font-display text-xs tracking-[.3em] text-neutral-500">DROP PREVIEW</p><h2 class="font-display font-bold text-3xl sm:text-5xl mt-2">곧 만나요.</h2></div><button onclick="goMarket()" class="text-sm font-bold underline shrink-0">마켓 전체 보기 →</button></div>
+      <div id="introPreview" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+    </div>
+  </section>
+
+  <!-- 8. creators -->
+  <section class="max-w-7xl mx-auto px-4 py-20 sm:py-32 grid lg:grid-cols-2 gap-10 items-start">
+    <div>
+      <p class="font-display text-xs tracking-[.3em] text-neutral-500">FOR CREATORS</p>
+      <h2 class="font-display font-bold text-4xl sm:text-6xl leading-tight mt-3">만들기만 하세요.<br>나머지는 저희가.</h2>
+      <p class="text-neutral-600 mt-6 leading-relaxed text-base sm:text-lg">제작, 포장, 배송, 결제, 교환·환불 접수까지 cavia가 맡아요. 크리에이터는 디자인과 브랜드를 키우는 일에만 집중하면 돼요. 판매 대금은 제작 원가와 수수료를 뺀 뒤 등록한 계좌로 정산돼요.</p>
+      <div class="mt-7 flex flex-wrap gap-3"><button onclick="startSell()" class="btn btn-dark">내 디자인 판매하기</button><button onclick="goMarket()" class="btn btn-line ibtn">마켓 둘러보기 <span aria-hidden="true">→</span></button></div>
+    </div>
+    <div class="grid gap-3">
+      <div class="bg-white border rounded-2xl p-5"><p class="font-bold">내 이름의 브랜드 페이지</p><p class="text-sm text-neutral-500 mt-1">내 브랜드로 모아 보는 판매자 페이지가 생겨요.</p></div>
+      <div class="bg-white border rounded-2xl p-5"><p class="font-bold">판매 · 정산 대시보드</p><p class="text-sm text-neutral-500 mt-1">주문, 배송 상태, 정산 대기금을 한눈에 확인해요.</p></div>
+      <div class="bg-white border rounded-2xl p-5"><p class="font-bold">시안 피드백</p><p class="text-sm text-neutral-500 mt-1">올리기 전에 시안을 공개하고 다른 이용자의 의견을 받아요.</p></div>
+    </div>
+  </section>
+
+  <!-- 9. growth -->
+  <section class="bg-black text-white grain">
+    <div class="max-w-7xl mx-auto px-4 py-20 sm:py-32">
+      <p class="font-display text-neon text-xs tracking-[.3em]">GROWTH CENTER</p>
+      <h2 class="font-display font-bold text-4xl sm:text-6xl leading-tight mt-3">혼자 키우지 않아도 돼요.</h2>
+      <p class="text-neutral-300 mt-5 max-w-2xl leading-relaxed">처음 브랜드를 만드는 사람을 위한 성장 단계예요. 단계마다 할 일이 정해져 있어서 뭘 해야 할지 몰라 멈추는 일이 없어요.</p>
+      <div id="introParts" class="mt-10 grid md:grid-cols-3 gap-4"></div>
+      <div class="mt-8"><button onclick="openGrowth()" class="btn btn-neon">성장센터 둘러보기</button></div>
+    </div>
+  </section>
+
+  <!-- 10. trust -->
+  <section class="max-w-7xl mx-auto px-4 py-20 sm:py-28">
+    <p class="font-display text-xs tracking-[.3em] text-neutral-500">TRUST</p>
+    <h2 class="font-display font-bold text-4xl sm:text-5xl leading-tight mt-3">안심하고 사고 팔 수 있게.</h2>
+    <div class="mt-8 grid sm:grid-cols-3 gap-4 text-sm">
+      <button onclick="openPolicy('refund')" class="text-left bg-white border rounded-2xl p-5 hover:border-black transition"><p class="font-bold text-base">교환 · 환불 정책</p><p class="text-neutral-500 mt-1">접수 방법과 기간을 미리 확인해요 →</p></button>
+      <button onclick="openPolicy('privacy')" class="text-left bg-white border rounded-2xl p-5 hover:border-black transition"><p class="font-bold text-base">개인정보처리방침</p><p class="text-neutral-500 mt-1">어떤 정보를 어디에 쓰는지 알려드려요 →</p></button>
+      <button onclick="openPolicy('terms')" class="text-left bg-white border rounded-2xl p-5 hover:border-black transition"><p class="font-bold text-base">이용약관</p><p class="text-neutral-500 mt-1">구매자와 판매자의 권리와 의무예요 →</p></button>
+    </div>
+  </section>
+
+  <!-- 11. faq -->
+  <section class="max-w-3xl mx-auto px-4 pb-20 sm:pb-28">
+    <p class="font-display text-xs tracking-[.3em] text-neutral-500">FAQ</p>
+    <h2 class="font-display font-bold text-4xl sm:text-5xl leading-tight mt-3 mb-8">자주 묻는 질문</h2>
+    <div class="border-t border-black">
+      <details class="faq border-b border-black"><summary class="flex items-center justify-between gap-4 py-5 font-bold text-base sm:text-lg">언제 오픈하나요?<span class="pl text-2xl transition-transform shrink-0">+</span></summary><p class="pb-5 text-neutral-600 leading-relaxed">1월 정식 오픈을 준비하고 있어요. 그 전에 가입해 두시면 오픈 소식을 가장 먼저 받아볼 수 있어요.</p></details><details class="faq border-b border-black"><summary class="flex items-center justify-between gap-4 py-5 font-bold text-base sm:text-lg">재고가 없으면 어떻게 파나요?<span class="pl text-2xl transition-transform shrink-0">+</span></summary><p class="pb-5 text-neutral-600 leading-relaxed">미리 만들어 두지 않아요. 주문이 들어오면 그때 한 벌씩 제작하는 주문제작(POD) 방식이라 재고 부담이 없어요.</p></details><details class="faq border-b border-black"><summary class="flex items-center justify-between gap-4 py-5 font-bold text-base sm:text-lg">판매하려면 사업자등록이 필요한가요?<span class="pl text-2xl transition-transform shrink-0">+</span></summary><p class="pb-5 text-neutral-600 leading-relaxed">가입과 브랜드 개설 단계에서는 필요하지 않아요. 판매 대금 정산과 관련한 세금 안내는 오픈 때 자세히 알려드릴게요.</p></details><details class="faq border-b border-black"><summary class="flex items-center justify-between gap-4 py-5 font-bold text-base sm:text-lg">배송은 얼마나 걸리나요?<span class="pl text-2xl transition-transform shrink-0">+</span></summary><p class="pb-5 text-neutral-600 leading-relaxed">주문제작이라 일반 상품보다 제작 시간이 더 필요해요. 정확한 기간은 상품 페이지와 주문 내역에서 확인할 수 있어요.</p></details><details class="faq border-b border-black"><summary class="flex items-center justify-between gap-4 py-5 font-bold text-base sm:text-lg">교환·환불은 어떻게 하나요?<span class="pl text-2xl transition-transform shrink-0">+</span></summary><p class="pb-5 text-neutral-600 leading-relaxed">고객센터로 주문번호와 사유, 사진을 보내주시면 접수해요. 자세한 기준은 교환 및 환불 정책에서 확인할 수 있어요.</p></details><details class="faq border-b border-black"><summary class="flex items-center justify-between gap-4 py-5 font-bold text-base sm:text-lg">내 디자인의 저작권은요?<span class="pl text-2xl transition-transform shrink-0">+</span></summary><p class="pb-5 text-neutral-600 leading-relaxed">디자인의 권리는 올린 사람에게 있어요. 반대로 타인의 저작권·상표권을 침해하는 디자인은 올릴 수 없고, 확인되면 상품이 중지될 수 있어요.</p></details>
+    </div>
+  </section>
+
+  <!-- 12. final cta -->
+  <section class="bg-neon">
+    <div class="max-w-7xl mx-auto px-4 py-20 sm:py-32 text-center">
+      <h2 class="font-display font-bold leading-[.92] tracking-tight text-[14vw] sm:text-[8rem]">READY TO<br>DROP?</h2>
+      <p class="mt-6 font-bold text-lg">1월, cavia가 열려요.</p>
+      <div class="mt-8 flex flex-wrap gap-3 justify-center"><button onclick="goMarket()" class="btn btn-dark ibtn">마켓 입장 <span aria-hidden="true">→</span></button><button onclick="openAuth()" class="btn btn-line">가입하고 소식 받기</button></div>
+    </div>
+  </section>
+</main>
+
 <!-- ================= MARKET VIEW ================= -->
-<main id="marketView">
+<main id="marketView" class="hidden">
   <!-- hero -->
   <section class="bg-black text-white grain overflow-hidden">
     <div class="max-w-7xl mx-auto px-4 pt-12 pb-10 sm:pt-16 sm:pb-14 grid md:grid-cols-[1.3fr_1fr] gap-8 items-center">
@@ -152,7 +296,11 @@ tailwind.config = { theme: { extend: { colors: { neon: '#C6FF00' }, fontFamily: 
     </form>
   </section>
 
-  <footer class="bg-black text-neutral-500 text-sm mt-10">
+
+</main>
+
+<!-- ================= SHARED FOOTER (소개/마켓 화면에서만 표시) ================= -->
+  <footer id="siteFooter" class="bg-black text-neutral-500 text-sm">
     <div class="max-w-7xl mx-auto px-4 py-8">
       <div class="flex flex-wrap gap-4 justify-between items-center">
         <span class="font-display text-white text-2xl font-bold lowercase">cav<span class="text-neon">ia</span></span>
@@ -169,7 +317,6 @@ tailwind.config = { theme: { extend: { colors: { neon: '#C6FF00' }, fontFamily: 
       </div>
     </div>
   </footer>
-</main>
 
 <!-- ================= STUDIO VIEW ================= -->
 <section id="studioView" class="hidden min-h-screen">
@@ -274,7 +421,7 @@ function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch
 let state = loadState();
 const PRICE_BANDS = {all:null, u40:[0,40000], m60:[40001,60000], m80:[60001,80000], o80:[80001,1e9]};
 const PRICE_LABELS = {all:'전체 가격', u40:'4만원 이하', m60:'4~6만원', m80:'6~8만원', o80:'8만원 이상'};
-const ui = { admin:false, adminTab:'overview', adminQ:'', orderF:'all', price:'all', brandF:null, cat:'all', sort:'pop', q:'', likesOnly:false, view:'market', tab:'home', justDropped:null, authTab:'social', authMode:'login', authNext:null, pm:null, brand:null, drawer:false };
+const ui = { admin:false, adminTab:'overview', adminQ:'', orderF:'all', price:'all', brandF:null, cat:'all', sort:'pop', q:'', likesOnly:false, view:'intro', tab:'home', justDropped:null, authTab:'social', authMode:'login', authNext:null, pm:null, brand:null, drawer:false };
 let draft = newDraft();
 
 try{ sessionStorage.removeItem('cavia_admin'); }catch(e){}   // 관리자 여부는 저장해 두지 않고 로그인 후 DB에서 매번 확인해요
@@ -365,15 +512,28 @@ document.addEventListener('click', e => { const m=$('#userMenu'); if(m && !e.tar
    MARKET
 ============================================================ */
 function goMarket(){ setView('market'); }
+function goIntro(){ setView('intro'); }
+function renderIntro(){
+  const m = $('#introMarquee');
+  if(m){ const tx = ['NEW DROP EVERY FRIDAY','NO STOCK · NO WASTE','CREATOR OWNED','PRINT ON DEMAND','OPEN YOUR BRAND TODAY','1월 오픈 예정']; const row = tx.map(x=>`<span class="mx-8">${x} <span class="text-neon">/</span></span>`).join(''); m.innerHTML = `<div class="flex">${row}</div><div class="flex">${row}</div>`; }
+  const pv = $('#introPreview');
+  if(pv){ const picks = state.products.filter(p=>p.active!==false).sort((a,b)=>b.sold-a.sold).slice(0,4);
+    pv.innerHTML = picks.map(p=>`<div class="cursor-pointer" onclick="openProduct('${p.id}')"><div class="relative aspect-[4/5] rounded-md overflow-hidden" style="background:${tileBg(p)}"><div class="absolute inset-0 p-3">${pSVG(p)}</div></div><h3 class="font-semibold mt-2.5 text-sm truncate">${esc(p.name)}</h3><p class="text-xs text-neutral-500 mt-0.5">${esc(p.brand)}</p></div>`).join('') + Array.from({length:4-picks.length}, ()=>`<div>${soonTile()}<h3 class="font-semibold mt-2.5 text-sm">오픈 준비중</h3><p class="text-xs text-neutral-500 mt-0.5">1월 오픈 예정</p></div>`).join(''); }
+  const pt = $('#introParts');
+  if(pt) pt.innerHTML = PARTS.map(p=>`<div class="rounded-3xl bg-white/10 p-6"><span class="font-display text-neon text-sm tracking-[.2em]">PART ${p.n}</span><h3 class="font-bold text-xl mt-2">${p.t}</h3><p class="text-xs text-neutral-400 mt-1">${p.s}</p><p class="text-sm text-neutral-300 mt-3 leading-relaxed">${p.d}</p></div>`).join('');
+}
 function setView(v){
   if(v==='admin' && !ui.admin) v = 'market';
   ui.view = v;
+  $('#introView').classList.toggle('hidden', v!=='intro');
   $('#marketView').classList.toggle('hidden', v!=='market');
+  $('#siteFooter').classList.toggle('hidden', v!=='intro' && v!=='market');
+  $('#tabIntro').classList.toggle('on', v==='intro'); $('#tabMarket').classList.toggle('on', v==='market');
   $('#studioView').classList.toggle('hidden', v!=='studio');
   $('#adminView').classList.toggle('hidden', v!=='admin');
   $('#growthView').classList.toggle('hidden', v!=='growth');
   window.scrollTo({top:0});
-  if(v==='studio') renderStudio(); else if(v==='admin') renderAdmin(); else if(v==='growth') renderGrowth(); else renderGrid();
+  if(v==='studio') renderStudio(); else if(v==='admin') renderAdmin(); else if(v==='growth') renderGrowth(); else if(v==='intro') renderIntro(); else renderGrid();
   renderAuthArea();
 }
 function renderCats(){
@@ -1793,7 +1953,7 @@ async function cloudPlaceOrder(t, name, phone, addr, method, pending){
 ============================================================ */
 // 토스페이먼츠 개발자센터의 "클라이언트 키"를 넣으세요: 결제위젯 키(test_gck_...) 또는 API 개별 연동 키(test_ck_...)
 // 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
-const TOSS_CLIENT_KEY = 'test_ck_c19yAOlsB7TbI094HX9ED19bx59BJnGEEt';
+const TOSS_CLIENT_KEY = '';
 const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
 const tossWhy = () => !/^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) ? (/_sk_|_gsk_/.test(TOSS_CLIENT_KEY) ? '시크릿 키가 들어 있어요(클라이언트 키로 바꿔 주세요)' : '클라이언트 키가 아직 코드에 없어요') : !sb ? '데이터베이스에 연결되지 않았어요' : !cu() ? '이 계정은 DB 계정이 아니에요(로그아웃 후 구글로 다시 로그인해 주세요)' : '';
 const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
@@ -2732,7 +2892,7 @@ if(!SALES_OPEN){
   openCheckout = function(){ toast('1월 정식 오픈 후 구매할 수 있어요', 3500); };
   placeOrder = function(){ toast('1월 정식 오픈 후 구매할 수 있어요', 3500); };
 }
-renderHero(); renderCats(); renderGrid(); renderAuthArea(); updateCartBadge(); renderCart(); initAuth(); cloudInit(); handleTossReturn();
+renderHero(); renderCats(); renderGrid(); renderAuthArea(); updateCartBadge(); renderCart(); renderIntro(); setView('intro'); window.scrollTo({top:0}); initAuth(); cloudInit(); handleTossReturn();
 </script>
 </body>
 </html>
