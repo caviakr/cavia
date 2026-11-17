@@ -2628,24 +2628,31 @@ function isResultHTML(r){
 ============================================================ */
 const CH = {open:false, busy:false, ai:null, msgs:[]};
 try{ CH.msgs = JSON.parse(sessionStorage.getItem('cavia_chat') || '[]').slice(-20); }catch(e){}
+const CHAT_AI = false;   // true 로 바꾸고 Edge Function(ai-chat) + ANTHROPIC_API_KEY 를 설정하면 AI 답변 사용
 const FAQ = [
-  [/브랜드.*(만들|개설|열|시작)|개설|창업/, '브랜드 만들기: ① 로그인 → ② 「내 디자인 판매하기」 → ③ 영문 브랜드명 중복확인 + 한글명 → ④ 개인/사업자 선택, 정산 계좌 입력 → 완료!\n개인은 원천세 3.3%가 공제되고 사업자는 공제가 없어요.'],
-  [/상품.*(등록|올리|드랍)|드랍|등록/, '상품 등록은 스튜디오 → 「상품 등록(DROP)」에서 해요.\n① POD: 베이스 의류 선택 → 내 그래픽 업로드 → 컬러 → 가격 (재고 없이 주문 시 제작)\n② 내 브랜드 옷 직접 판매: 상품 사진 + 사이즈별 재고 입력 후 직접 배송.\n실수익은 화면에서 실시간으로 계산돼요.'],
-  [/수수료|수익|정산|출금|세금|원천/, '수익 = 판매가 − 제작원가 − PG 수수료 3% 이며, 개인 판매자는 여기서 원천세 3.3%가 빠져요. 배송완료된 주문부터 출금 가능하고 최소 출금액은 10,000원이에요.'],
-  [/리뷰|후기|별점/, '리뷰는 해당 상품을 실제로 구매한 계정만 쓸 수 있어요(구매 1건당 1개, 별점+텍스트). 상품 상세 하단에서 작성하고, 판매자 프로필의 평점에 반영돼요.'],
-  [/성장|시안|피드백|파트|part/i, '성장센터(상단 메뉴)는 3단계예요. PART 1 시안 제출·피드백 → PART 2 첫 상품 등록·첫 판매 도전 → PART 3 1회 이상 판매한 창업자의 이력·프로필.'],
-  [/이미지|사진|카메라|검색/, '검색창 옆 「AI 이미지 검색」에서 사진을 찍거나 올리면 AI가 옷을 분석해 cavia와 외부 쇼핑몰의 동일/유사 상품을 나눠 보여줘요 (로그인 필요).'],
-  [/배송|쿠폰|무료|결제|주문/, '5만원 이상 무료배송(미만 3,000원)이고, 첫 구매 10% 쿠폰은 상단 배너나 홈 퀵버튼에서 받을 수 있어요. 주문 내역은 우측 상단 계정 메뉴에서 확인해요. 현재 결제는 시뮬레이션이에요.'],
-  [/로그인|가입|계정/, '우측 상단 「로그인/가입」에서 구글·카카오·네이버·페이스북 또는 이메일로 시작할 수 있어요.']
+  [/^(안녕|하이|hi|hello|ㅎㅇ|헬로)/i, '안녕하세요, cavia 도우미입니다\n오픈, 판매, 구매, 환불 등 궁금한 점을 물어보세요'],
+  [/오픈|언제|출시|런칭|open/i, '1월 정식 오픈 예정\n그 전까지 가입은 가능하고, 판매와 구매는 오픈 후 시작\n미리 가입하면 오픈 소식을 가장 먼저 받을 수 있음'],
+  [/사업자|등록증|서류|세금|원천/, '판매 시작에 사업자등록증 필요 없음\n가입 → 브랜드 개설 → 판매 순서로 진행\n정산·세금 처리 방식은 오픈 시 안내'],
+  [/미성년|나이|몇\s*살|15|청소년|학생/, 'cavia는 15살이 만든 플랫폼\n미성년자 이용과 정산 조건은 오픈 때 안내 예정\n정확한 기준은 고객센터에 문의'],
+  [/브랜드.*(만들|개설|열|시작)|개설|창업/, '브랜드 만들기\n① 로그인 ② 「내 디자인 판매하기」 ③ 영문 브랜드명 중복확인 + 한글명 ④ 정산 계좌 입력\n스튜디오는 오픈 전에도 둘러볼 수 있음'],
+  [/상품.*(등록|올리|드랍)|드랍|등록|업로드|디자인|에디터/, '상품 등록은 1월 오픈과 함께 시작 (현재 준비중)\n오픈 후 스튜디오 → 「상품 등록」에서 베이스 선택 → 그래픽 업로드 → 가격 설정\n주문이 들어오면 한 벌씩 제작되어 재고 부담 없음'],
+  [/수수료|수익|정산|출금/, '수익 = 판매가 − 제작원가 − 수수료\n정산은 구매 확정 후 등록한 계좌로 진행\n자세한 정산·세금 기준은 오픈 시 안내'],
+  [/리뷰|후기|별점/, '리뷰는 실제 구매자만 작성 가능\n구매 1건당 리뷰 1개, 별점과 글 작성'],
+  [/성장|시안|피드백|파트|part/i, '성장센터는 3단계\nPART 1 시안 제출 → PART 2 첫 판매 도전 → PART 3 판매 이력 쌓기\n상단 「성장센터」에서 확인'],
+  [/이미지|사진|카메라|검색/, '마켓 검색창 옆 「AI 이미지 검색」\n옷 사진을 올리면 비슷한 상품을 찾아줌 (로그인 필요)'],
+  [/환불|교환|반품|취소/, '교환·환불은 고객센터로 주문번호, 사유, 사진 전달\n접수 후 영업일 기준 2일 안에 답변\n자세한 기준은 하단 「교환 및 환불 정책」 참고'],
+  [/배송|쿠폰|무료|결제|주문|구매|살\s*수|사고/, '구매는 1월 오픈 후 가능 (현재 준비중)\n첫 구매 10% 쿠폰, 5만원 이상 배송비 무료\n주문제작이라 제작 시간이 추가로 소요'],
+  [/로그인|가입|계정|탈퇴/, '우측 상단 「로그인」에서 구글 또는 이메일로 가입 가능\n미리 가입하면 오픈 소식을 가장 먼저 수신'],
+  [/연락|고객센터|전화|문의|이메일|메일|담당/, `고객센터 ${BIZ.tel}\n이메일 ${BIZ.email}\n평일 10:00–17:00 (점심 12:00–13:00, 주말·공휴일 휴무)`]
 ];
-function faq(q){ for(const [re,a] of FAQ) if(re.test(q)) return a; return '궁금한 주제를 골라 주세요: 브랜드 만들기 / 상품 등록 / 수수료·정산 / 리뷰 / 성장센터 / AI 이미지 검색 / 주문·배송'; }
+function faq(q){ for(const [re,a] of FAQ) if(re.test(q)) return a; return `질문을 정확히 이해하지 못함\n아래 주제 중 하나를 골라 주세요\n오픈 시기 / 사업자등록증 / 브랜드 만들기 / 환불 / 고객센터`; }
 function chatHTML(){
-  const st = CH.ai===true ? ['bg-green-500','AI 연결됨'] : ['bg-amber-400', hasSession() ? '기본 안내 모드' : '기본 안내 (로그인하면 AI)'];
-  const msgs = CH.msgs.length ? CH.msgs : [{role:'assistant', content:'안녕하세요! cavia 도우미예요 \n브랜드 제작, 상품 등록, 사이트 이용에 대해 물어보세요.'}];
+  const st = CH.ai===true ? ['bg-green-500','AI 연결됨'] : ['bg-green-500','바로 답변'];
+  const msgs = CH.msgs.length ? CH.msgs : [{role:'assistant', content:'안녕하세요, cavia 도우미입니다\n오픈 시기, 판매 방법, 환불 등을 물어보세요'}];
   const fmt = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
   return `<div class="flex items-center justify-between bg-black text-white px-4 py-3"><div><p class="font-display font-bold leading-none">cavia <span class="text-neon">AI</span></p><p class="text-[11px] text-neutral-400 mt-1 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full ${st[0]}"></span>${st[1]}</p></div><button onclick="toggleChat()" class="text-xl p-1 hover:text-neon" aria-label="챗봇 닫기">✕</button></div>
     <div id="chatLog" class="flex-1 overflow-y-auto p-3 space-y-2.5 bg-neutral-50">${msgs.map(m=>`<div class="flex ${m.role==='user'?'justify-end':''}"><div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${m.role==='user'?'bg-black text-white rounded-br-sm':'bg-white border rounded-bl-sm'}">${fmt(m.content)}</div></div>`).join('')}${CH.busy?'<div class="flex"><div class="bg-white border rounded-2xl px-3 py-2 text-sm text-neutral-400">답변 작성 중…</div></div>':''}</div>
-    <div class="px-3 pt-2 flex gap-1.5 overflow-x-auto no-scrollbar bg-white border-t">${['브랜드 만들기','상품 등록 방법','수수료·정산','리뷰 쓰는 법'].map(q=>`<button class="chip !py-1 !px-2.5 !text-xs" onclick="chatSend('${q}')">${q}</button>`).join('')}</div>
+    <div class="px-3 pt-2 flex gap-1.5 overflow-x-auto no-scrollbar bg-white border-t">${['오픈 언제?','사업자등록증 필요?','브랜드 만들기','환불·교환','고객센터'].map(q=>`<button class="chip !py-1 !px-2.5 !text-xs" onclick="chatSend('${q}')">${q}</button>`).join('')}</div>
     <form class="p-3 flex gap-2 bg-white" onsubmit="event.preventDefault();chatSend()"><input id="chatInput" class="inp !py-2" maxlength="500" placeholder="무엇이든 물어보세요" autocomplete="off"><button class="btn btn-neon !px-3" type="submit" ${CH.busy?'disabled':''} aria-label="보내기">전송</button></form>`;
 }
 function renderChat(){ const w = $('#chatWin'); if(!w) return; w.innerHTML = chatHTML(); const l = $('#chatLog'); if(l) l.scrollTop = l.scrollHeight; }
@@ -2657,17 +2664,17 @@ async function chatSend(text){
   const inp = $('#chatInput'); text = (text || (inp ? inp.value : '')).trim(); if(!text || CH.busy) return; if(inp) inp.value = '';
   CH.msgs.push({role:'user', content:text}); CH.busy = true; renderChat();
   let reply = null, why = '';
-  if(hasSession()){
+  if(CHAT_AI && hasSession()){
     try{ const {data, error} = await sb.functions.invoke('ai-chat', {body:{messages:CH.msgs.slice(-10)}}); if(error) throw error;
       if(data && data.reply){ reply = data.reply; CH.ai = true; } else throw {context:{json:async()=>data}}; }
     catch(e){ CH.ai = false; why = (await fnErr(e)).msg; }
-  } else { CH.ai = false; why = sb ? '로그인하면 AI가 직접 답해 드려요.' : ''; }
+  } else { CH.ai = false; why = ''; }
   if(!reply) reply = faq(text) + (why ? `\n\n(${why} 지금은 기본 안내로 답했어요.)` : '');
   CH.msgs.push({role:'assistant', content:reply}); CH.msgs = CH.msgs.slice(-20); CH.busy = false;
   try{ sessionStorage.setItem('cavia_chat', JSON.stringify(CH.msgs)); }catch(e){}
   renderChat();
 }
-document.body.insertAdjacentHTML('beforeend', `<button id="chatFab" onclick="toggleChat()" aria-label="AI 챗봇 열기" class="fixed bottom-4 right-4 z-[45] w-14 h-14 rounded-full bg-black text-neon shadow-2xl border-2 border-neon flex items-center justify-center hover:scale-105 transition"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/></svg></button>
+document.body.insertAdjacentHTML('beforeend', `<button id="chatFab" onclick="toggleChat()" aria-label="AI 챗봇 열기" class="fixed bottom-4 right-4 z-[45] w-14 h-14 rounded-full bg-black text-neon shadow-2xl border-2 border-neon flex items-center justify-center hover:scale-105 transition"><span class="font-display font-bold text-neon text-[22px] leading-none tracking-tight select-none">AI</span></button>
 <div id="chatWin" class="hidden fixed z-[45] bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[360px] h-[78vh] sm:h-[520px] max-h-[100dvh] bg-white sm:rounded-2xl shadow-2xl border flex flex-col overflow-hidden"></div>`);
 document.addEventListener('keydown', e => { if(e.key==='Escape' && CH.open && $('#modal').classList.contains('hidden')) toggleChat(); });
 
