@@ -3196,7 +3196,7 @@ const _calChat = cloudAfterLogin;
 cloudAfterLogin = async function(){ await _calChat.apply(this, arguments); refreshUnread(); };
 
 /* ===== 오픈 전 잠금: 정식 오픈(1월) 전까지 판매·구매 막기. 오픈 때 SALES_OPEN = true 로 바꾸세요 ===== */
-const SALES_OPEN = true;
+const SALES_OPEN = false;
 const soonPanel = (h,d,btn,fn) => `<div class="bg-black text-white rounded-2xl grain px-6 py-16 sm:py-24 text-center"><p class="font-display text-neon text-[11px] tracking-[.25em]">CAVIA</p><h1 class="font-display text-3xl sm:text-5xl font-bold mt-3 leading-tight">${h}</h1><p class="text-neutral-300 mt-4 text-sm sm:text-base">${d}</p><button class="btn btn-neon mt-8" onclick="${fn}">${btn}</button></div>`;
 if(!SALES_OPEN){
   /* 상품 등록(DROP)·내 옷 바로 판매 탭만 막고, 대시보드·정산·성장 등은 그대로 보여줘요 */
