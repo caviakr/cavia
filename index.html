@@ -391,9 +391,23 @@ const BASES = {
   sweat: {label:'헤비 맨투맨', cost:16500, cat:'hoodie'},
   tee:   {label:'박시 티셔츠', cost:8500,  cat:'tee'},
   zip:   {label:'후드 집업',   cost:26000, cat:'outer'},
-  denim: {label:'와이드 데님', cost:24000, cat:'pants'},
-  cap:   {label:'볼캡',       cost:7500,  cat:'acc'}
+  denim: {label:'팬츠',       cost:24000, cat:'pants'},
+  cap:   {label:'모자',       cost:7500,  cat:'acc'},
+  socks: {label:'양말',       cost:3500,  cat:'acc'}
 };
+/* 의류 종류별 주문제작 옵션 (선택한 종류에 맞는 항목만 표시) */
+const FIT3 = ['레귤러핏','오버핏','박시핏'], LEN3 = ['크롭','기본','롱'];
+const OPTS = {
+  tee:   [['핏',FIT3],['기장',LEN3],['소매',['반팔','7부','긴팔']],['넥',['라운드','브이넥','헨리넥']]],
+  hoodie:[['핏',FIT3],['기장',LEN3],['후드',['싱글','더블']],['포켓',['캥거루','없음','지퍼']],['밑단',['밴딩','일자 절개']]],
+  sweat: [['핏',FIT3],['기장',LEN3],['넥',['라운드','하프넥']],['안감',['일반','기모']],['밑단',['밴딩','일자 절개']]],
+  zip:   [['핏',FIT3],['기장',LEN3],['지퍼',['풀지퍼','하프지퍼']],['포켓',['기본','지퍼 포켓','카고 포켓']],['밑단',['밴딩','일자 절개']]],
+  denim: [['핏',['레귤러핏','와이드핏','루즈핏']],['기장',['숏','미디엄','롱']],['허리 밴딩',['기본','와이드 밴딩']],['허리끈',['있음','없음']],['포켓',['기본','지퍼 포켓','카고 포켓']],['밑단',['일반','절개']]],
+  cap:   [['종류',['볼캡','버킷햇','비니','트러커캡']],['챙 형태',['플랫','커브드']],['깊이',['얕은형','기본','깊은형']],['사이즈 조절',['버클','스냅백','스트랩']],['패널 구성',['5패널','6패널']]],
+  socks: [['길이',['발목','중목','장목']],['두께',['얇은형','일반','두꺼운형']],['발목 조임',['기본','와이드 립']],['발바닥',['일반','쿠션형']],['형태',['일반','발가락 양말형']]]
+};
+const defOpts = base => Object.fromEntries((OPTS[base]||[]).map(([k,v])=>[k,v[0]]));
+const cleanOpts = (base,o) => Object.fromEntries((OPTS[base]||[]).filter(([k,v])=>o&&v.includes(o[k])).map(([k])=>[k,o[k]]));
 const COLORS = {
   black:{n:'블랙', h:'#121212'}, white:{n:'화이트', h:'#f1f1ee'}, grey:{n:'멜란지 그레이', h:'#8b8b8b'},
   navy:{n:'네이비', h:'#1d2745'}, olive:{n:'올리브', h:'#4b533a'}, cream:{n:'크림', h:'#e6dcc3'}
@@ -451,7 +465,7 @@ const totalStock = p => p.kind==='own' ? Object.values(p.stock||{}).reduce((a,n)
 const isSoldOut = p => p.kind==='own' && totalStock(p)<=0;
 const sizesOf = p => p.kind==='own' ? Object.keys(p.stock||{}) : sizesFor(p.base);
 const cartQtyOf = (pid, size) => state.cart.filter(l=>l.pid===pid && l.size===size).reduce((a,l)=>a+l.qty,0);
-function newDraft(){ return {mode:'pod', ownCost:0, stock:{S:10,M:10,L:10,XL:10,'2XL':10,FREE:10}, base:'hoodie', color:'black', graphic:'none', upload:null, photo:null, name:'', story:'', price:recommend('hoodie'), priceTouched:false}; }
+function newDraft(){ return {mode:'pod', ownCost:0, stock:{S:10,M:10,L:10,XL:10,'2XL':10,FREE:10}, base:'hoodie', opts:defOpts('hoodie'), color:'black', graphic:'none', upload:null, photo:null, name:'', story:'', price:recommend('hoodie'), priceTouched:false}; }
 function recommend(base){ return Math.round(BASES[base].cost*3.5/1000)*1000; }
 
 /* 수익 계산: 판매가 - 제작원가 - PG수수료(3%) = 정산 전 수익 → 원천세 3.3% 공제 → 실수익 */
@@ -493,6 +507,9 @@ function garmentSVG(base, colorKey, gid, img){
   } else if (shape==='denim'){
     body = `<path d="${PANTS}" fill="${c}" stroke="${st}" stroke-width="2.5" stroke-linejoin="round"/><rect x="85" y="28" width="130" height="16" fill="${shade}"/><path d="M150 44V120" stroke="${shade}" stroke-width="2"/><path d="M92 50Q108 70 120 50" fill="none" stroke="${st}" stroke-width="2"/><path d="M180 50Q192 70 208 50" fill="none" stroke="${st}" stroke-width="2"/>`;
     tf = 'translate(90,85) scale(.52)';
+  } else if (shape==='socks'){
+    body = `<path d="M108 36H196V196Q196 218 224 232Q262 252 252 288Q244 312 206 312H140Q108 312 108 280Z" fill="${c}" stroke="${st}" stroke-width="2.5" stroke-linejoin="round"/><rect x="108" y="36" width="88" height="26" fill="${shade}"/><path d="M108 66H196M108 74H196" stroke="${shade}" stroke-width="1.5"/><path d="M108 280Q108 312 140 312H206Q226 312 238 300Q226 290 196 290H108Z" fill="${shade}"/>`;
+    tf = 'translate(126,92) scale(.46)';
   } else if (shape==='cap'){
     body = `<path d="M62 205Q62 92 150 92Q238 92 238 205Z" fill="${c}" stroke="${st}" stroke-width="2.5"/><path d="M150 92V205M105 100Q100 150 104 205M195 100Q200 150 196 205" stroke="${shade}" stroke-width="1.5" fill="none"/><path d="M56 205Q150 190 244 205Q292 216 282 240Q150 214 56 238Z" fill="${c}" stroke="${st}" stroke-width="2.5" stroke-linejoin="round"/><path d="M56 205Q150 190 244 205" fill="none" stroke="${shade}" stroke-width="5"/><circle cx="150" cy="92" r="6" fill="${shade}"/>`;
     tf = 'translate(122,118) scale(.56)';
@@ -755,6 +772,7 @@ function renderProductModal(){
       <h2 class="text-2xl font-bold leading-tight mt-1">${esc(p.name)}</h2>
       <p id="pmRating" class="text-sm mt-1 min-h-[1.25rem]"></p>${p.sampleOk?'<p class="text-xs mt-1"><span class="bg-black text-neon rounded px-1.5 py-0.5 font-bold">샘플 검수 완료</span> <span class="text-neutral-500">판매자가 실물 샘플을 직접 확인했어요</span></p>':''}
       <p class="text-sm text-neutral-500 mt-1">${BASES[p.base].label} · ${COLORS[p.color].n}</p>
+      ${Object.keys(cleanOpts(p.base,p.opts)).length?`<div class="flex flex-wrap gap-1.5 mt-2">${Object.entries(cleanOpts(p.base,p.opts)).map(([k,v])=>`<span class="text-[11px] font-semibold bg-neutral-100 border rounded-full px-2.5 py-1"><span class="text-neutral-400">${k}</span> ${v}</span>`).join('')}</div>`:''}
       <div class="flex items-center justify-between mt-3">
         <span class="font-display text-3xl font-bold">${won(p.price)}</span>
         <button onclick="toggleLike('${p.id}')" class="flex items-center gap-1.5 text-sm font-semibold border rounded-full px-3 py-1.5 hover:border-black" aria-label="좋아요">${heartSVG(liked)} ${liked?'담음':'좋아요'}</button>
@@ -862,9 +880,9 @@ function openCheckout(){
   showModal(`<form class="p-6 sm:p-8" onsubmit="event.preventDefault();placeOrder()">
     ${modalHead('CHECKOUT', `${t.lines.length}개 상품 · ${tossReady()?(/^test_/.test(TOSS_CLIENT_KEY)?'토스페이먼츠 테스트 결제 (실제 청구되지 않아요)':'토스페이먼츠 결제'):'결제 시뮬레이션 (실제 결제되지 않아요)'}`)}
     <div class="space-y-3">
-      <input id="ck_name" class="inp" placeholder="받는 분 이름" value="${esc(u.nick)}">
-      <input id="ck_phone" class="inp" placeholder="연락처 (010-1234-5678)" inputmode="tel">
-      <input id="ck_addr" class="inp" placeholder="배송지 주소 (예: 서울시 성동구 아차산로 1)">
+      <input id="ck_name" class="inp" placeholder="받는 분 이름" value="${esc((u.info&&u.info.name)||u.nick)}">
+      <input id="ck_phone" class="inp" placeholder="연락처 (010-1234-5678)" inputmode="tel" value="${esc((u.info&&u.info.phone)||'')}">
+      <input id="ck_addr" class="inp" placeholder="배송지 주소 (예: 서울시 성동구 아차산로 1)" value="${esc(u.info?[u.info.addr,u.info.addr2].filter(Boolean).join(' '):'')}">
     </div>
     ${tossReady()?'':`<p class="text-xs text-neutral-400 mt-3">토스 결제 꺼짐 사유: ${tossWhy()}</p>`}<p class="text-sm font-bold mt-5 mb-2">결제 수단</p>
     <div class="grid grid-cols-2 gap-2">${[['card','신용/체크카드'],['kakao','카카오페이'],['naver','네이버페이'],['toss','토스페이']].map((m,i)=>`<label class="sel px-3 py-2.5 text-sm font-semibold cursor-pointer flex items-center gap-2 has-[:checked]:border-black has-[:checked]:shadow-[0_0_0_3px_#C6FF00]"><input type="radio" name="pay" value="${m[0]}" ${i===0?'checked':''} class="accent-black">${m[1]}</label>`).join('')}</div>
@@ -1288,36 +1306,39 @@ function renderHome(){
 /* ---------- DROP (상품 등록) ---------- */
 function graphicThumb(id){ return `<svg viewBox="0 0 100 100" class="w-full h-full">${GRAPHICS[id].svg('#111','#C6FF00')}</svg>`; }
 function renderDrop(){
-  const d = draft;
+  const d = draft; let _n = 0; const N = () => ++_n;
   $('#studioMain').innerHTML = `
-    <div class="mb-4"><h1 class="font-display text-3xl font-bold">NEW DROP</h1><p class="text-neutral-500 text-sm">${d.mode==='pod'?'베이스 선택 → 그래픽 → 컬러 → 가격. 오른쪽에서 실시간 수익을 확인하세요.':'의류 종류 → 상품 사진 → 재고 → 가격. 이미 만든 내 브랜드 옷을 바로 판매해요.'}</p></div>
+    <div class="mb-4"><h1 class="font-display text-3xl font-bold">NEW DROP</h1><p class="text-neutral-500 text-sm">${d.mode==='pod'?'베이스 선택 → 그래픽 → 제작 옵션 → 컬러 → 가격. 오른쪽에서 실시간 수익을 확인하세요.':'의류 종류 → 상품 사진 → 옵션 → 재고 → 가격. 이미 만든 내 브랜드 옷을 바로 판매해요.'}</p></div>
     <div class="grid sm:grid-cols-2 gap-3 mb-5">
       <button onclick="setDropMode('pod')" class="sel text-left p-4 ${d.mode==='pod'?'on':''}"><p class="font-bold">베이스 의류로 제작 (POD)</p><p class="text-xs text-neutral-500 mt-1">재고 없이, 그래픽만 올리면 주문 시 제작돼요</p></button>
       <button onclick="setDropMode('own')" class="sel text-left p-4 ${d.mode==='own'?'on':''}"><p class="font-bold">내 브랜드 옷 직접 판매</p><p class="text-xs text-neutral-500 mt-1">이미 만든 옷 사진을 올리고 재고를 직접 관리해요</p></button>
     </div>
     <div class="grid xl:grid-cols-[1.2fr_1fr] gap-5 items-start">
       <div class="space-y-4">
-        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">1</span>${d.mode==='pod'?'베이스 의류':'의류 종류'}</h3>
+        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${N()}</span>${d.mode==='pod'?'베이스 의류':'의류 종류'}</h3>
           <div class="grid grid-cols-3 gap-2">${Object.entries(BASES).map(([k,b])=>`<button onclick="pickBase('${k}')" class="sel p-2 text-center ${d.base===k?'on':''}"><div class="aspect-square rounded bg-neutral-200 p-1">${garmentSVG(k,'black','none')}</div><p class="text-xs font-bold mt-1.5">${b.label}</p>${d.mode==='pod'?`<p class="text-[11px] text-neutral-500">원가 ${won(b.cost)}</p>`:''}</button>`).join('')}</div></div>
-        ${d.mode==='pod'?`<div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">2</span>그래픽 이미지</h3>
+        ${d.mode==='pod'?`<div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${N()}</span>그래픽 이미지</h3>
           <p class="text-sm text-neutral-500">내 그래픽 이미지(투명 배경 PNG 권장)를 업로드하면 오른쪽 3D 미리보기 앞면에 프린트돼요.</p>
           <div class="flex flex-wrap gap-2 mt-3">
             <label class="btn btn-line cursor-pointer !py-2 text-sm">내 이미지 업로드<input type="file" accept="image/*" class="hidden" onchange="handleUpload(this.files[0]);this.value=''"></label>
             ${d.upload?`<div class="w-14 h-14 rounded-lg border bg-neutral-100 p-1"><img src="${d.upload}" alt="" class="w-full h-full object-contain"></div><button class="text-sm underline text-red-600" onclick="draft.upload=null;draft.graphic='none';renderDrop()">삭제</button>`:''}
           </div></div>`:''}
-        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-1"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${d.mode==='pod'?'+':'2'}</span>${d.mode==='pod'?'실제 상품 사진 <span class="text-xs font-normal text-neutral-400">(선택)</span>':'상품 사진 <span class="text-xs font-bold text-red-500">(필수)</span>'}</h3>
-          <p class="text-xs text-neutral-500 mb-3">${d.mode==='pod'?'착용컷·목업 사진을 올리면 마켓 카드, 상세, 장바구니에 일러스트 대신 사진이 표시돼요.':'판매할 옷의 실제 사진을 올려 주세요. 마켓 카드·상세·3D 미리보기에 그대로 쓰여요.'}</p>
+        ${d.mode==='own'?`<div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-1"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${N()}</span>상품 사진 <span class="text-xs font-bold text-red-500">(필수)</span></h3>
+          <p class="text-xs text-neutral-500 mb-3">판매할 옷의 실제 사진을 올려 주세요. 마켓 카드·상세·3D 미리보기에 그대로 쓰여요.</p>
           <div class="flex flex-wrap items-center gap-3">
             ${d.photo?`<div class="w-20 h-24 rounded-lg overflow-hidden border"><img src="${d.photo}" alt="" class="w-full h-full object-cover"></div><button class="text-sm underline text-red-600" onclick="draft.photo=null;renderDrop()">사진 삭제</button>`:''}
             <label class="btn btn-line cursor-pointer !py-2 text-sm">${d.photo?'사진 변경':'상품 사진 업로드'}<input type="file" accept="image/*" class="hidden" onchange="handlePhoto(this.files[0]);this.value=''"></label>
-          </div></div>
-        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">3</span>컬러</h3>
+          </div></div>`:''}
+        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-1"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${N()}</span>주문제작 옵션 <span class="text-xs font-normal text-neutral-400">· ${BASES[d.base].label}</span></h3>
+          <p class="text-xs text-neutral-500 mb-4">선택한 옵션은 상품 상세에 그대로 표시돼요</p>
+          <div class="space-y-4">${(OPTS[d.base]||[]).map(([k,vs],i)=>`<div><p class="text-sm font-bold mb-1.5">${k}</p><div class="flex flex-wrap gap-2">${vs.map((v,j)=>`<button onclick="pickOpt(${i},${j})" class="sel px-3.5 py-2 text-sm font-semibold ${d.opts[k]===v?'on':''}">${v}</button>`).join('')}</div></div>`).join('')}</div></div>
+        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${N()}</span>컬러</h3>
           <div class="flex flex-wrap gap-3">${Object.entries(COLORS).map(([k,c])=>`<button onclick="draft.color='${k}';renderDrop()" class="flex flex-col items-center gap-1" aria-label="${c.n}"><span class="w-11 h-11 rounded-full border-2 ${d.color===k?'border-black ring-4 ring-neon':'border-neutral-300'}" style="background:${c.h}"></span><span class="text-[11px] font-semibold">${c.n}</span></button>`).join('')}</div></div>
-        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">4</span>상품 정보</h3>
+        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${N()}</span>상품 정보</h3>
           <input id="dr_name" class="inp mb-3" maxlength="40" placeholder="${d.mode==='pod'?'상품명 (예: MELT DOWN 오버핏 후드)':'상품명 (예: 워크 코튼 자켓 / 블랙)'}" value="${esc(d.name)}" oninput="draft.name=this.value;updatePreview()">
           <textarea id="dr_story" class="inp" rows="3" maxlength="200" placeholder="${d.mode==='pod'?'디자이너 스토리 (이 디자인에 담긴 이야기를 들려주세요)':'브랜드 스토리 (소재·핏·제작 이야기를 들려주세요)'}" oninput="draft.story=this.value">${esc(d.story)}</textarea></div>
-        ${d.mode==='own'?`<div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-1"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">5</span>사이즈별 재고</h3><p class="text-xs text-neutral-500 mb-3">재고가 0이면 해당 사이즈는 품절 처리돼요. 주문이 들어오면 자동으로 차감돼요.</p><div class="grid gap-2" style="grid-template-columns:repeat(${sizesFor(d.base).length},minmax(0,1fr))">${sizesFor(d.base).map(s=>`<label class="text-center"><span class="block text-xs font-bold mb-1">${s}</span><input type="number" min="0" max="9999" class="inp !px-2 text-center" value="${d.stock[s]??0}" oninput="draft.stock['${s}']=Math.max(0,Math.floor(+this.value||0))"></label>`).join('')}</div></div>`:''}
-        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${d.mode==='pod'?'5':'6'}</span>판매가 설정</h3>
+        ${d.mode==='own'?`<div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-1"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${N()}</span>사이즈별 재고</h3><p class="text-xs text-neutral-500 mb-3">재고가 0이면 해당 사이즈는 품절 처리돼요. 주문이 들어오면 자동으로 차감돼요.</p><div class="grid gap-2" style="grid-template-columns:repeat(${sizesFor(d.base).length},minmax(0,1fr))">${sizesFor(d.base).map(s=>`<label class="text-center"><span class="block text-xs font-bold mb-1">${s}</span><input type="number" min="0" max="9999" class="inp !px-2 text-center" value="${d.stock[s]??0}" oninput="draft.stock['${s}']=Math.max(0,Math.floor(+this.value||0))"></label>`).join('')}</div></div>`:''}
+        <div class="bg-white border rounded-2xl p-5"><h3 class="font-bold mb-3"><span class="bg-black text-neon rounded px-1.5 mr-1.5 text-sm">${N()}</span>판매가 설정</h3>
           <div class="flex gap-2"><div class="relative flex-1"><input id="dr_price" type="number" min="0" step="100" class="inp !pr-10 font-display font-bold text-lg" value="${d.price||''}" placeholder="0" oninput="draft.price=+this.value;draft.priceTouched=true;updatePreview()"><span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 font-semibold">원</span></div>${d.mode==='pod'?`<button class="btn btn-line" onclick="setPrice(recommend(draft.base))">추천가 ${won(recommend(d.base))}</button>`:''}</div>
           <div class="flex gap-2 mt-2">${[-5000,-1000,1000,5000].map(n=>`<button class="chip !py-1 !text-xs" onclick="setPrice((+draft.price||0)+(${n}))">${n>0?'+':''}${n.toLocaleString()}</button>`).join('')}</div>
           ${d.mode==='own'?`<label class="text-sm font-bold block mt-4">내 원가 <span class="font-normal text-neutral-400">(매입·제작비, 선택)</span></label><div class="relative mt-1"><input id="dr_cost" type="number" min="0" step="100" class="inp !pr-10" value="${d.ownCost||''}" placeholder="0" oninput="draft.ownCost=+this.value;updatePreview()"><span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 font-semibold">원</span></div><p class="text-xs text-neutral-400 mt-1">입력하면 오른쪽 계산기의 내 실수익에 반영돼요</p>`:''}</div>
@@ -1394,13 +1415,14 @@ function view3D(deg){
   setTimeout(()=>{ const x=$('#obj3d'); if(x) x.style.transition='none'; }, 650);
 }
 function toggleSpin(){ spin = !spin; $('#spinBtn').textContent = spin ? '회전 멈춤' : '자동 회전'; }
-function pickBase(k){ draft.base=k; if(!draft.priceTouched && draft.mode==='pod') draft.price=recommend(k); renderDrop(); }
+function pickBase(k){ draft.base=k; draft.opts=defOpts(k); if(!draft.priceTouched && draft.mode==='pod') draft.price=recommend(k); renderDrop(); }
 function setDropMode(m){
   if(draft.mode===m) return;
   draft.mode = m;
   if(!draft.priceTouched) draft.price = m==='pod' ? recommend(draft.base) : 0;
   renderDrop();
 }
+function pickOpt(i,j){ const [k,v]=OPTS[draft.base][i]; draft.opts[k]=v[j]; renderDrop(); }
 function setPrice(v){ draft.price=Math.max(0,Math.round(v/100)*100); draft.priceTouched=true; const el=$('#dr_price'); if(el) el.value=draft.price||''; updatePreview(); }
 function updatePreview(){
   const d=draft, b=BASES[d.base], own=d.mode==='own', u=me(), rate=taxRateOf(u);
@@ -1453,7 +1475,7 @@ function publishDrop(){
   if(name.length<2){ const i=$('#dr_name'); i.focus(); i.classList.add('shake'); setTimeout(()=>i.classList.remove('shake'),400); return toast('상품명을 2자 이상 입력해 주세요'); }
   const own = d.mode==='own';
   if(own && !d.photo) return toast('상품 사진을 업로드해 주세요');
-  if(!own && d.graphic!=='upload' && !d.photo) return toast('그래픽 이미지를 업로드해 주세요');
+  if(!own && d.graphic!=='upload') return toast('그래픽 이미지를 업로드해 주세요');
   if(!d.price||d.price<1000) return toast('판매가를 입력해 주세요 (최소 1,000원)');
   const cost = own ? Math.max(0, Math.round(+d.ownCost||0)) : b.cost;
   const c = calc(d.price, cost, taxRateOf(u));
@@ -1463,7 +1485,7 @@ function publishDrop(){
     stock = {}; sizesFor(d.base).forEach(s=>{ stock[s] = Math.max(0, Math.floor(+d.stock[s]||0)); });
     if(Object.values(stock).every(n=>n===0)) return toast('재고를 1개 이상 입력해 주세요');
   }
-  const p = {id:'u'+Date.now(), kind:own?'own':'pod', stock, name, brand:u.brand.en, designer:u.nick, base:d.base, color:d.color, graphic:own?'none':d.graphic, upload:(!own && d.graphic==='upload')?d.upload:null, photo:d.photo||null, price:d.price, cost, earn:c.net, tax:c.tax, story:d.story.trim(), sold:0, owner:u.id, active:!d.sampleFirst, createdAt:Date.now()};
+  const p = {id:'u'+Date.now(), kind:own?'own':'pod', stock, name, brand:u.brand.en, designer:u.nick, base:d.base, opts:cleanOpts(d.base,d.opts), color:d.color, graphic:own?'none':d.graphic, upload:(!own && d.graphic==='upload')?d.upload:null, photo:d.photo||null, price:d.price, cost, earn:c.net, tax:c.tax, story:d.story.trim(), sold:0, owner:u.id, active:!d.sampleFirst, createdAt:Date.now()};
   state.products.unshift(p); save();
   if(d.sampleFirst){ draft = newDraft(); ui.tab='products'; setView('studio'); toast('상품을 비공개로 저장했어요. 샘플을 주문해 직접 확인해 보세요', 4200); setTimeout(()=>openSampleOrder(p.id), 300); return; }
   ui.cat='all'; ui.sort='new'; ui.q=''; ui.likesOnly=false; ui.price='all'; ui.brandF=null; ui.justDropped=p.id; $('#searchInput').value='';
@@ -1911,7 +1933,7 @@ async function uploadDataUrl(dataUrl, folder){
 function fromRow(r){
   const c = calc(r.price, r.cost || 0);
   return {id:r.id, kind:r.kind, stock:r.stock||null, name:r.name, brand:r.brand, designer:r.designer||'', base:BASES[r.base]?r.base:'tee', color:COLORS[r.color]?r.color:'black',
-    graphic: r.graphic_url ? 'upload' : (GRAPHICS[r.graphic] ? r.graphic : 'none'), upload:r.graphic_url||null, photo:r.photo||null, price:r.price, cost:r.cost||0, earn:c.net, tax:c.tax,
+    graphic: r.graphic_url ? 'upload' : (GRAPHICS[r.graphic] ? r.graphic : 'none'), upload:r.graphic_url||null, photo:r.photo||null, opts:cleanOpts(BASES[r.base]?r.base:'tee', r.opts), price:r.price, cost:r.cost||0, earn:c.net, tax:c.tax,
     story:r.story||'', sampleOk:!!r.sample_ok, sold:r.sold||0, owner:r.owner||null, active:r.active!==false, createdAt:Date.parse(r.created_at)||Date.now(), cloud:true};
 }
 async function cloudLoadProducts(){
@@ -1955,7 +1977,7 @@ async function cloudPushProduct(p, silent){
     if(photo && !/^https?:/.test(photo)) photo = null;
     if(gurl && gurl.startsWith('data:')) gurl = await uploadDataUrl(gurl, 'g');
     await rpc('upsert_product', {p:{id:p.id, name:p.name, kind:p.kind, base:p.base, color:p.color, graphic:p.graphic==='upload'?'upload':p.graphic, price:p.price, cost:p.cost,
-      photo, graphic_url:gurl, story:p.story, stock:p.stock, active:p.active!==false, created_ms:p.createdAt}});
+      photo, graphic_url:gurl, opts:cleanOpts(p.base,p.opts), story:p.story, stock:p.stock, active:p.active!==false, created_ms:p.createdAt}});
     p.cloud = true; if(photo) p.photo = photo; if(gurl) p.upload = gurl; save(); return true;
   }catch(e){ console.warn(e); if(!silent) toast('클라우드 등록 실패: ' + dbErr(e), 4500); return false; }
 }
@@ -1975,8 +1997,9 @@ async function cloudAfterLogin(){
   if(!isCloud()) await cloudInit();
   const u = cu(); if(!u) return;
   try{
-    const {data:prof} = await sb.from('profiles').select('nick,role,brand_en,brand_kr,bio').eq('id', u.id).maybeSingle();
-    if(prof){ u.bio = prof.bio || ''; if(prof.nick) u.nick = prof.nick; }
+    const {data:prof} = await sb.from('profiles').select('nick,role,brand_en,brand_kr,bio,handle').eq('id', u.id).maybeSingle();
+    if(prof){ u.bio = prof.bio || ''; u.handle = prof.handle || ''; if(prof.nick) u.nick = prof.nick; }
+    try{ const mi = await sb.from('member_info').select('real_name,phone,addr,addr2').eq('user_id', u.id).maybeSingle(); if(mi && mi.data) u.info = {name:mi.data.real_name||'', phone:fmtPhone(mi.data.phone), addr:mi.data.addr||'', addr2:mi.data.addr2||''}; }catch(e){}
     if(prof && prof.brand_en && !u.brand){ u.brand = {kr:prof.brand_kr||'', en:prof.brand_en, bank:'', acct:'', holder:'', biz:{type:'personal', regNo:''}, createdAt:Date.now()}; save(); renderAuthArea(); }
     if(u.brand && !(prof && prof.brand_en)){ try{ await rpc('claim_brand', {p_en:u.brand.en, p_kr:u.brand.kr||''}); }catch(e){ toast('브랜드를 서버에 등록하지 못했어요: ' + dbErr(e), 5000); return; } }
     for(const p of state.products.filter(p=>p.owner===u.id && !p.cloud && !p.demo)) await cloudPushProduct(p, true);
@@ -2045,7 +2068,7 @@ async function cloudPlaceOrder(t, name, phone, addr, method, pending){
 ============================================================ */
 // 토스페이먼츠 개발자센터의 "클라이언트 키"를 넣으세요: 결제위젯 키(test_gck_...) 또는 API 개별 연동 키(test_ck_...)
 // 시크릿 키(..._sk_...)는 절대 여기에 넣지 마세요. 비워 두면 기존 결제 시뮬레이션으로 동작해요.
-const TOSS_CLIENT_KEY = 'test_ck_c19yAOlsB7TbI094HX9ED19bx59BJnGEEt';
+const TOSS_CLIENT_KEY = '';
 const tossReady = () => /^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) && !!sb && !!cu();
 const tossWhy = () => !/^(test|live)_g?ck_/.test(TOSS_CLIENT_KEY) ? (/_sk_|_gsk_/.test(TOSS_CLIENT_KEY) ? '시크릿 키가 들어 있어요(클라이언트 키로 바꿔 주세요)' : '클라이언트 키가 아직 코드에 없어요') : !sb ? '데이터베이스에 연결되지 않았어요' : !cu() ? '이 계정은 DB 계정이 아니에요(로그아웃 후 구글로 다시 로그인해 주세요)' : '';
 const tossWidget = () => /_gck_/.test(TOSS_CLIENT_KEY);
@@ -2965,7 +2988,7 @@ const CHAT = {unread:0};
 const MY = {tab:'home', threads:[], tid:null, other:null, msgs:[], lastId:0, poll:null, tick:0, tok:0};
 const avatarHTML = (name, cls='w-14 h-14 text-2xl') => `<div class="${cls} shrink-0 rounded-full bg-black text-neon font-display font-bold flex items-center justify-center select-none">${esc(String(name||'?').trim().charAt(0).toUpperCase()||'?')}</div>`;
 const chatOK = () => !!cu();
-const CHAT_ERR = {'blocked':'차단 관계라 메시지를 보낼 수 없어요','too fast':'너무 빨리 보내고 있어요. 잠시 후 다시 시도해 주세요','message length':'메시지는 1~500자까지 보낼 수 있어요','chat only with sellers':'판매자에게만 새 대화를 시작할 수 있어요','no such thread':'대화를 찾을 수 없어요','reason length':'사유를 2~300자로 적어 주세요','too many reports':'오늘은 더 이상 신고할 수 없어요','nick length':'닉네임은 1~12자로 입력해 주세요','bio length':'소개글은 150자까지 쓸 수 있어요'};
+const CHAT_ERR = {'blocked':'차단 관계라 메시지를 보낼 수 없어요','too fast':'너무 빨리 보내고 있어요. 잠시 후 다시 시도해 주세요','message length':'메시지는 1~500자까지 보낼 수 있어요','chat only with sellers':'판매자에게만 새 대화를 시작할 수 있어요','no such thread':'대화를 찾을 수 없어요','reason length':'사유를 2~300자로 적어 주세요','too many reports':'오늘은 더 이상 신고할 수 없어요','nick length':'닉네임은 1~12자로 입력해 주세요','bio length':'소개글은 150자까지 쓸 수 있어요','handle taken':'이미 사용 중인 아이디예요','handle format':'아이디는 영문 소문자·숫자·_ 4~16자만 쓸 수 있어요','name length':'이름은 30자까지 입력할 수 있어요','addr length':'주소가 너무 길어요','phone format':'휴대폰 번호를 확인해 주세요'};
 const chatErr = e => { const m = String((e && (e.message||e.details)) || e || ''); for(const k in CHAT_ERR) if(m.includes(k)) return CHAT_ERR[k]; return dbErr(e); };
 
 function openMyPage(tab){
@@ -2992,7 +3015,7 @@ function myHome(){
   const card = (n,l,f) => `<button onclick="${f}" class="text-left rounded-2xl border-2 border-black bg-white p-4 hover:bg-neon transition"><p class="font-display text-3xl font-bold">${n}</p><p class="text-sm font-bold mt-1">${l}</p></button>`;
   body.innerHTML = `<div class="rounded-3xl bg-black text-white grain p-5 sm:p-7 flex flex-wrap items-center gap-4">
       ${avatarHTML(u.nick,'w-16 h-16 sm:w-20 sm:h-20 text-3xl sm:text-4xl')}
-      <div class="min-w-0 flex-1"><h2 class="font-display text-2xl sm:text-3xl font-bold truncate">${esc(u.nick)}</h2>
+      <div class="min-w-0 flex-1"><h2 class="font-display text-2xl sm:text-3xl font-bold truncate">${esc(u.nick)}${u.handle?` <span class="text-base font-normal text-neutral-400">@${esc(u.handle)}</span>`:''}</h2>
         <p class="text-sm text-neutral-400 truncate">${esc(u.email || u.provider+' 계정')}${u.brand?` · 브랜드 <b class="text-neon">${esc(u.brand.en)}</b>`:''}</p>
         <p class="text-sm text-neutral-200 mt-2 break-words">${u.bio?esc(u.bio):'<span class="text-neutral-500">소개글이 아직 없어요</span>'}</p></div>
       <div class="flex gap-2 flex-wrap"><button class="btn btn-neon !py-2" onclick="myTab('settings')">프로필 수정</button>${u.brand?`<button class="btn btn-line !py-2 !text-white !border-white/50 hover:!bg-white hover:!text-black" data-b="${esc(u.brand.en)}" onclick="openSeller(this.dataset.b)">내 판매자 프로필</button>`:''}</div></div>
@@ -3015,30 +3038,96 @@ function myLikes(){
 
 /* ---- 설정 ---- */
 async function mySettings(){
-  const u = me(), body = $('#myBody');
+  const u = me(), body = $('#myBody'), inf = u.info || {};
+  const canPw = u.provider==='이메일';
   body.innerHTML = `<div class="grid lg:grid-cols-2 gap-5 max-w-5xl">
-    <div class="rounded-2xl border bg-white p-5"><h3 class="font-bold text-lg">프로필 수정</h3>
-      <label class="block text-xs font-bold text-neutral-500 mt-4">닉네임 (1~12자)</label><input id="setNick" maxlength="12" value="${esc(u.nick)}" class="field mt-1 w-full">
-      <label class="block text-xs font-bold text-neutral-500 mt-4">소개글 <span id="setBioN" class="font-normal">${(u.bio||'').length}/150</span></label><textarea id="setBio" maxlength="150" rows="4" class="field mt-1 w-full" oninput="$('#setBioN').textContent=this.value.length+'/150'">${esc(u.bio||'')}</textarea>
-      <p class="text-xs text-neutral-400 mt-1">판매자 프로필에 공개돼요. 전화번호·주소 같은 개인정보는 쓰지 마세요.</p>
+    <div class="rounded-2xl border bg-white p-5"><h3 class="font-bold text-lg">프로필 · 아이디</h3>
+      <label class="block text-xs font-bold text-neutral-500 mt-4">아이디 <span class="font-normal">(영문 소문자·숫자·_ 4~16자 · 프로필에 @아이디로 표시)</span></label>
+      <div class="relative mt-1"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">@</span><input id="setHandle" maxlength="16" autocapitalize="off" autocomplete="off" value="${esc(u.handle||'')}" oninput="checkHandle()" class="field w-full !pl-8"></div>
+      <p id="setHandleMsg" class="text-xs mt-1 h-4 text-neutral-400">${u.handle?'':'아이디를 정하면 @아이디로 보여요'}</p>
+      <label class="block text-xs font-bold text-neutral-500 mt-3">닉네임 (1~12자)</label><input id="setNick" maxlength="12" value="${esc(u.nick)}" class="field mt-1 w-full">
+      <label class="block text-xs font-bold text-neutral-500 mt-4">소개글 <span id="setBioN" class="font-normal">${(u.bio||'').length}/150</span></label><textarea id="setBio" maxlength="150" rows="3" class="field mt-1 w-full" oninput="$('#setBioN').textContent=this.value.length+'/150'">${esc(u.bio||'')}</textarea>
+      <p class="text-xs text-neutral-400 mt-1">아이디·닉네임·소개글은 판매자 프로필에 공개돼요. 전화번호·주소는 쓰지 마세요.</p>
       <button class="btn btn-dark mt-4" onclick="saveProfile()">저장</button></div>
+    <div class="rounded-2xl border bg-white p-5"><h3 class="font-bold text-lg">회원정보 <span class="text-xs font-normal text-neutral-400">나만 볼 수 있어요</span></h3>
+      <p class="text-xs text-neutral-500 mt-1">저장하면 주문할 때 자동으로 채워져요.</p>
+      <label class="block text-xs font-bold text-neutral-500 mt-3">이름</label><input id="miName" maxlength="30" value="${esc(inf.name||'')}" class="field mt-1 w-full" autocomplete="name">
+      <label class="block text-xs font-bold text-neutral-500 mt-3">휴대폰 번호</label><input id="miPhone" maxlength="13" inputmode="tel" value="${esc(inf.phone||'')}" placeholder="010-1234-5678" class="field mt-1 w-full" autocomplete="tel">
+      <label class="block text-xs font-bold text-neutral-500 mt-3">기본 배송지</label><input id="miAddr" maxlength="150" value="${esc(inf.addr||'')}" placeholder="도로명 주소" class="field mt-1 w-full" autocomplete="street-address">
+      <input id="miAddr2" maxlength="100" value="${esc(inf.addr2||'')}" placeholder="상세 주소 (동·호수)" class="field mt-2 w-full">
+      <button class="btn btn-dark mt-4" onclick="saveMemberInfo()">회원정보 저장</button></div>
+    ${canPw?`<div class="rounded-2xl border bg-white p-5"><h3 class="font-bold text-lg">비밀번호 변경</h3>
+      <input id="pwOld" type="password" class="field mt-3 w-full" placeholder="현재 비밀번호" autocomplete="current-password">
+      <input id="pwNew" type="password" class="field mt-2 w-full" placeholder="새 비밀번호 (8자 이상)" autocomplete="new-password">
+      <input id="pwNew2" type="password" class="field mt-2 w-full" placeholder="새 비밀번호 확인" autocomplete="new-password">
+      <button class="btn btn-dark mt-4" onclick="changePw()">비밀번호 변경</button></div>`:''}
     <div class="rounded-2xl border bg-white p-5"><h3 class="font-bold text-lg">차단한 사용자</h3><div id="blockList" class="mt-3 text-sm text-neutral-400">불러오는 중…</div></div>
     <div class="rounded-2xl border bg-white p-5"><h3 class="font-bold text-lg">계정</h3>
       <dl class="mt-3 text-sm space-y-2"><div class="flex justify-between gap-3"><dt class="text-neutral-500">로그인 방식</dt><dd class="font-semibold">${esc(u.provider||'-')}</dd></div><div class="flex justify-between gap-3"><dt class="text-neutral-500">이메일</dt><dd class="font-semibold truncate">${esc(u.email||'-')}</dd></div><div class="flex justify-between gap-3"><dt class="text-neutral-500">가입일</dt><dd class="font-semibold">${fdate(u.createdAt)}</dd></div></dl>
       <div class="flex flex-wrap gap-2 mt-4"><button class="btn btn-line !py-2 text-sm" onclick="openPolicy('terms')">이용약관</button><button class="btn btn-line !py-2 text-sm" onclick="openPolicy('privacy')">개인정보처리방침</button><button class="btn btn-line !py-2 text-sm" onclick="openPolicy('refund')">교환·환불 정책</button></div>
       <button class="btn btn-dark w-full mt-4" onclick="logout()">로그아웃</button></div>
-    <div class="rounded-2xl border border-red-200 bg-white p-5"><h3 class="font-bold text-lg text-red-600">회원 탈퇴</h3><p class="text-sm text-neutral-500 mt-2">대화와 차단 기록이 삭제되고, 내 상품은 비공개로 전환돼요. 주문 이력은 법에 따라 보관될 수 있어요. 되돌릴 수 없어요.</p><button class="btn w-full mt-4 !border-red-500 !text-red-600 border-2" onclick="openDeleteAccount()">회원 탈퇴</button></div></div>`;
+    <div class="rounded-2xl border border-red-200 bg-white p-5"><h3 class="font-bold text-lg text-red-600">회원 탈퇴</h3><p class="text-sm text-neutral-500 mt-2">대화·차단·회원정보가 삭제되고, 내 상품은 비공개로 전환돼요. 주문 이력은 법에 따라 보관될 수 있어요. 되돌릴 수 없어요.</p><button class="btn w-full mt-4 !border-red-500 !text-red-600 border-2" onclick="openDeleteAccount()">회원 탈퇴</button></div></div>`;
   const bl = $('#blockList'); if(!chatOK()){ bl.textContent = '서버 연결된 계정에서 확인할 수 있어요'; return; }
   try{ const rows = await rpc('chat_blocked_list'); if(MY.tab!=='settings') return;
     bl.innerHTML = rows.length ? rows.map(r=>`<div class="flex items-center justify-between gap-2 py-2 border-b last:border-0 text-black"><span class="truncate font-semibold">${esc(r.nick)}${r.brand?` <span class="text-neutral-400 font-normal">· ${esc(r.brand)}</span>`:''}</span><button class="btn btn-line !py-1 !px-3 text-xs" onclick="doBlock('${r.user_id}',false,true)">차단 해제</button></div>`).join('') : '차단한 사용자가 없어요'; }
   catch(e){ bl.textContent = chatErr(e); }
 }
+const HANDLE_RE = /^[a-z0-9_]{4,16}$/, HANDLE_RESERVED = ['admin','administrator','cavia','official','support','help','system','root','null','undefined'];
+let _hTimer = null, _hOK = true;
+function checkHandle(){
+  const inp = $('#setHandle'), msg = $('#setHandleMsg'); if(!inp||!msg) return;
+  const v = inp.value.trim().toLowerCase(), u = me();
+  clearTimeout(_hTimer); _hOK = false;
+  const set = (txt, cls, ok) => { msg.textContent = txt; msg.className = 'text-xs mt-1 h-4 ' + cls; _hOK = ok; };
+  if(!v){ set('아이디를 비워두면 @아이디가 표시되지 않아요','text-neutral-400',true); return; }
+  if(v===(u.handle||'')){ set('현재 내 아이디예요','text-neutral-400',true); return; }
+  if(!HANDLE_RE.test(v)){ set('영문 소문자·숫자·_ 로 4~16자만 쓸 수 있어요','text-red-500',false); return; }
+  if(HANDLE_RESERVED.includes(v)){ set('사용할 수 없는 아이디예요','text-red-500',false); return; }
+  set('확인 중…','text-neutral-400',false);
+  _hTimer = setTimeout(async ()=>{
+    try{
+      const free = cu() ? await rpc('handle_available', {p_handle:v}) : !state.users.some(x=>x.id!==u.id && (x.handle||'').toLowerCase()===v);
+      if((($('#setHandle')||{}).value||'').trim().toLowerCase()!==v) return;
+      free ? set('사용할 수 있는 아이디예요','text-green-600',true) : set('이미 사용 중인 아이디예요','text-red-500',false);
+    }catch(e){ set(chatErr(e),'text-red-500',false); }
+  }, 350);
+}
 async function saveProfile(){
-  const u = me(), nick = $('#setNick').value.trim(), bio = $('#setBio').value.trim();
+  const u = me(), nick = $('#setNick').value.trim(), bio = $('#setBio').value.trim(), handle = $('#setHandle').value.trim().toLowerCase();
   if(!nick || nick.length>12) return toast('닉네임은 1~12자로 입력해 주세요');
   if(bio.length>150) return toast('소개글은 150자까지 쓸 수 있어요');
-  try{ if(cu()) await rpc('update_my_profile', {p_nick:nick, p_bio:bio}); u.nick = nick; u.bio = bio; save(); renderAuthArea(); toast('프로필을 저장했어요'); renderMy(); }
-  catch(e){ toast(chatErr(e)); }
+  if(handle && handle!==(u.handle||'')){
+    if(!HANDLE_RE.test(handle) || HANDLE_RESERVED.includes(handle)) return toast('아이디를 확인해 주세요');
+    if(!_hOK) return toast('아이디 사용 가능 여부를 확인해 주세요');
+  }
+  try{
+    if(cu()) await rpc('update_my_account', {p_nick:nick, p_bio:bio, p_handle:handle});
+    else if(handle && state.users.some(x=>x.id!==u.id && (x.handle||'').toLowerCase()===handle)) return toast('이미 사용 중인 아이디예요');
+    u.nick = nick; u.bio = bio; u.handle = handle; save(); renderAuthArea(); toast('프로필을 저장했어요'); renderMy();
+  }catch(e){ toast(chatErr(e)); }
+}
+const fmtPhone = s => { const d = String(s||'').replace(/\D/g,''); return d.length===11 ? d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3') : d.length===10 ? d.replace(/(\d{2,3})(\d{3,4})(\d{4})/,'$1-$2-$3') : d; };
+async function saveMemberInfo(){
+  const u = me(), name = $('#miName').value.trim(), phone = $('#miPhone').value.replace(/\D/g,''), addr = $('#miAddr').value.trim(), addr2 = $('#miAddr2').value.trim();
+  if(phone && !/^[0-9]{9,11}$/.test(phone)) return toast('휴대폰 번호를 확인해 주세요');
+  try{
+    if(cu()) await rpc('save_member_info', {p_name:name, p_phone:phone, p_addr:addr, p_addr2:addr2});
+    u.info = {name, phone:fmtPhone(phone), addr, addr2}; save(); toast('회원정보를 저장했어요'); renderMy();
+  }catch(e){ toast(/phone format/.test(String(e&&e.message))?'휴대폰 번호를 확인해 주세요':chatErr(e)); }
+}
+async function changePw(){
+  const u = me(), o = $('#pwOld').value, n = $('#pwNew').value, n2 = $('#pwNew2').value;
+  if(!o) return toast('현재 비밀번호를 입력해 주세요');
+  if(n.length<8) return toast('새 비밀번호는 8자 이상이어야 해요');
+  if(n!==n2) return toast('새 비밀번호가 서로 달라요');
+  if(n===o) return toast('현재 비밀번호와 다른 비밀번호를 입력해 주세요');
+  try{
+    if(cu()){
+      const {error:e1} = await sb.auth.signInWithPassword({email:u.email, password:o}); if(e1) return toast('현재 비밀번호가 맞지 않아요');
+      const {error:e2} = await sb.auth.updateUser({password:n}); if(e2) throw e2;
+    } else { if(u.pw!==o) return toast('현재 비밀번호가 맞지 않아요'); u.pw = n; save(); }
+    ['pwOld','pwNew','pwNew2'].forEach(i=>{ const el=$('#'+i); if(el) el.value=''; }); toast('비밀번호를 변경했어요');
+  }catch(e){ toast(dbErr(e)); }
 }
 function openDeleteAccount(){
   showModal(`<div class="p-6 sm:p-8">${modalHead('DELETE ACCOUNT','정말 탈퇴하시겠어요?')}<ul class="text-sm text-neutral-600 list-disc pl-5 space-y-1"><li>채팅·차단 기록이 삭제돼요</li><li>내 상품은 비공개로 바뀌고 브랜드가 해제돼요</li><li>주문·정산 이력은 법에 따라 보관될 수 있어요</li><li>되돌릴 수 없어요</li></ul>
@@ -3154,9 +3243,9 @@ async function doBlock(userId, on, stay){
 
 /* ---- 판매자 프로필 (게시물 = 판매 중인 옷) ---- */
 async function sellerRow(brand){
-  if(isCloud()){ try{ const {data} = await sb.from('profiles').select('id,nick,bio,created_at').eq('brand_en', brand).maybeSingle(); if(data) return data; }catch(e){} }
+  if(isCloud()){ try{ const {data} = await sb.from('profiles').select('id,nick,bio,handle,created_at').eq('brand_en', brand).maybeSingle(); if(data) return data; }catch(e){} }
   const owner = (state.products.find(p=>p.brand===brand && p.owner)||{}).owner, u = state.users.find(x=>x.id===owner);
-  return u ? {id:u.id, nick:u.nick, bio:u.bio||'', created_at:u.createdAt, local:true} : null;
+  return u ? {id:u.id, nick:u.nick, handle:u.handle||'', bio:u.bio||'', created_at:u.createdAt, local:true} : null;
 }
 async function openSeller(brand){
   if(!brand) return;
@@ -3175,7 +3264,7 @@ async function openSeller(brand){
     <div class="flex flex-wrap items-center gap-4 -mt-2">${avatarHTML(brand,'w-20 h-20 sm:w-24 sm:h-24 text-4xl')}
       <div class="min-w-0 flex-1"><p class="font-display text-neon bg-black inline-block text-[11px] tracking-[.2em] px-2 py-1 rounded">${d.official?'OFFICIAL BRAND':'SELLER'}</p>
         <h2 class="font-display text-3xl sm:text-4xl font-bold mt-1 break-words">${esc(d.brand)}</h2>
-        <p class="text-sm text-neutral-500">@${esc((row&&row.nick)||d.nick||'-')}${joinedTs?` · ${fdate(joinedTs)} 가입`:''}${stage?` · <b class="text-black">PART ${stage}</b>`:''}</p></div></div>
+        <p class="text-sm text-neutral-500">@${esc((row&&row.handle)||(row&&row.nick)||d.nick||'-')}${joinedTs?` · ${fdate(joinedTs)} 가입`:''}${stage?` · <b class="text-black">PART ${stage}</b>`:''}</p></div></div>
     ${row&&row.bio?`<p class="mt-4 text-sm sm:text-base whitespace-pre-wrap break-words">${esc(row.bio)}</p>`:''}
     <div class="flex flex-wrap gap-2 mt-4">${chatBtn}</div>
     <div class="grid grid-cols-4 gap-2 mt-5 text-center">
